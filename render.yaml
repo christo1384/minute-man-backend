@@ -1,0 +1,23 @@
+# Render Blueprint for the Minute Man backend.
+# Connect this folder as a repo and Render reads this file and sets everything up.
+#
+# As shipped this deploys the FREE, KEYLESS demo build — one click, nothing to fill
+# in, $0 — so you get a shareable link immediately. To switch on real Claude AI later:
+#   Render dashboard → your service → Environment →
+#     set DEFAULT_PROVIDER = anthropic, and add ANTHROPIC_API_KEY = sk-ant-...
+#   then Manual Deploy. (Never put the key in this file.)
+services:
+  - type: web
+    name: minute-man-api
+    runtime: python
+    plan: free            # change to "starter" (~US$7/mo) for always-on, no cold-start sleep
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.4"
+      - key: DEFAULT_PROVIDER
+        value: demo        # keyless free build; change to "anthropic" in the dashboard for real AI
+      - key: ALLOWED_ORIGINS
+        value: "*"         # the page is served same-origin by this service, so CORS is a non-issue here
