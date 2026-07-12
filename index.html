@@ -179,6 +179,7 @@
   </div>
   <div class="home-actions">
     <button class="btn-hero" id="homeNew">＋ New Meeting</button>
+    <button class="btn-second" id="homePrev" style="display:none">▶ Previous Meeting</button>
     <button class="btn-second" id="homeSettings">⚙ Crew &amp; Settings</button>
     <div class="a2hs" id="a2hs"></div>
     <p class="foot">Health &amp; safety minutes for NZ construction.<br/>AI decision-support — a responsible person must review &amp; sign off.</p>
@@ -404,6 +405,19 @@
     <div class="actions">
       <button class="btn btn-ghost" id="cancelSettings" type="button">Cancel</button>
       <button class="btn btn-primary" id="saveSettings" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PREVIOUS MEETING PLAYBACK MODAL ============ -->
+<div class="modal hidden" id="playbackModal">
+  <div class="panel">
+    <h2>Previous Meeting</h2>
+    <p class="sub" id="pbMeta">—</p>
+    <p class="meta" id="pbStatus" style="margin-top:14px">Ready.</p>
+    <div class="actions">
+      <button class="btn btn-ghost" id="pbStop" type="button" style="display:none">Stop</button>
+      <button class="btn btn-primary" id="pbNew" type="button">New Meeting →</button>
     </div>
   </div>
 </div>
@@ -738,6 +752,90 @@ function buildRecord(demo){
   Array.from(state.selected).forEach(n=>{ sg.insertAdjacentHTML('beforeend',
     `<div class="signrow"><span class="nm">${n}</span><span class="sg" contenteditable>${state.signatures[n]||'________'}</span></div>`); });
   if(state.selected.size===0) sg.innerHTML='<div class="signrow"><span class="nm" style="color:#94a3b8">No attendees selected on Setup.</span></div>';
+  saveLastMeetingSnapshot(demo);
+}
+
+// ---------- Previous meeting playback ----------------------------------------
+// Snapshot the just-built record (everything the Confirm step already had the
+// team sign off on) so the NEXT meeting's leader can play it back before
+// starting a new one. Deliberately excludes attendance — playback is a spoken
+// recap of what was discussed/agreed, not a roll call.
+const LAST_MEETING_KEY = 'minuteman_last_meeting_v1';
+function saveLastMeetingSnapshot(demo){
+  const payload = {
+    meetingType: state.meetingType, siteName: state.siteName, date: state.date, ledBy: state.ledBy,
+    hazards: (demo && demo.hazards) ? demo.hazards.map(h=>({hazard:h.hazard, control:h.control, tier:h.tier})) : [],
+    actions: (demo && demo.actions) ? demo.actions.map(a=>({who:a.who, what:a.what, when:a.when})) : [],
+    decisions: state.decisions || []
+  };
+  try{ localStorage.setItem(LAST_MEETING_KEY, JSON.stringify(payload)); }catch(_){}
+  refreshHomePrev();
+}
+function loadLastMeeting(){ try{ const raw=localStorage.getItem(LAST_MEETING_KEY); return raw?JSON.parse(raw):null; }catch(_){ return null; } }
+function hasLastMeeting(){ return !!loadLastMeeting(); }
+function refreshHomePrev(){ const btn=document.getElementById('homePrev'); if(btn) btn.style.display = hasLastMeeting() ? '' : 'none'; }
+
+// Build the spoken script: section name, then a condensed sentence per item.
+// Skips attendance entirely, per spec. Condensed phrasing (matching the Confirm
+// read-back style) keeps total runtime to a few minutes even with a full set
+// of hazards/actions/decisions.
+function buildPlaybackScript(rec){
+  const parts=[`Previous meeting. ${rec.meetingType||'Toolbox Talk'}, ${rec.siteName||'site not recorded'}.`];
+  parts.push('Hazards and controls.');
+  if(rec.hazards && rec.hazards.length){
+    rec.hazards.forEach(h=>parts.push(`${h.hazard}. Control agreed: ${h.control}. ${h.tier||''}.`));
+  } else { parts.push('No hazards were recorded.'); }
+  parts.push('Actions and follow ups.');
+  if(rec.actions && rec.actions.length){
+    rec.actions.forEach(a=>parts.push(`${a.who}. ${a.what}. By ${a.when}.`));
+  } else { parts.push('No actions were recorded.'); }
+  parts.push('Decisions.');
+  if(rec.decisions && rec.decisions.length){
+    rec.decisions.forEach(d=>parts.push(String(d)));
+  } else { parts.push('No decisions were recorded.'); }
+  parts.push('End of previous meeting.');
+  return parts;
+}
+
+let playbackActive=false;
+function playPrevious(){
+  const rec=loadLastMeeting();
+  if(!rec) return;
+  const statusEl=document.getElementById('pbStatus'), stopBtn=document.getElementById('pbStop');
+  if(!('speechSynthesis' in window)){
+    statusEl.textContent='Audio playback isn’t supported in this browser — try Chrome or Edge.';
+    stopBtn.style.display='none';
+    return;
+  }
+  const script=buildPlaybackScript(rec);
+  let i=0; playbackActive=true;
+  statusEl.textContent='Playing…'; stopBtn.style.display='';
+  function next(){
+    if(!playbackActive || i>=script.length){
+      playbackActive=false;
+      statusEl.textContent = i>=script.length ? 'Finished — hit New Meeting to start the next one.' : 'Stopped.';
+      stopBtn.style.display='none';
+      return;
+    }
+    const u=new SpeechSynthesisUtterance(script[i]); i++;
+    u.rate=0.98; u.onend=next; u.onerror=next;
+    window.speechSynthesis.speak(u);
+  }
+  next();
+}
+function stopPlayback(){
+  playbackActive=false;
+  try{ window.speechSynthesis.cancel(); }catch(_){}
+  const statusEl=document.getElementById('pbStatus'), stopBtn=document.getElementById('pbStop');
+  if(statusEl) statusEl.textContent='Stopped.';
+  if(stopBtn) stopBtn.style.display='none';
+}
+function openPlayback(){
+  const rec=loadLastMeeting();
+  if(!rec) return;
+  document.getElementById('pbMeta').textContent = `${rec.meetingType||'Meeting'} — ${rec.siteName||'—'} — ${rec.date||'—'}`;
+  document.getElementById('playbackModal').classList.remove('hidden');
+  playPrevious();
 }
 
 // ---------- Export -----------------------------------------------------------
@@ -912,10 +1010,15 @@ shareBtn.addEventListener('click',async()=>{
 
 // ---------- Home / front door + install ------------------------------------
 function enterApp(screen){ document.body.classList.remove('home-mode'); show(screen||1); }
-function goHome(){ document.body.classList.add('home-mode'); window.scrollTo({top:0}); }
+function goHome(){ document.body.classList.add('home-mode'); window.scrollTo({top:0}); refreshHomePrev(); }
 document.getElementById('homeNew').addEventListener('click',()=>enterApp(1));
 document.getElementById('homeSettings').addEventListener('click',openSettings);
 document.getElementById('homeLogo').addEventListener('click',goHome);
+document.getElementById('homePrev').addEventListener('click',openPlayback);
+document.getElementById('pbStop').addEventListener('click',stopPlayback);
+document.getElementById('pbNew').addEventListener('click',()=>{ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); enterApp(1); });
+document.getElementById('playbackModal').addEventListener('click',e=>{ if(e.target===e.currentTarget){ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); } });
+refreshHomePrev();
 
 // Add-to-Home-Screen: iPhone shows instructions; Android offers a native prompt.
 const a2hs=document.getElementById('a2hs');
