@@ -34,7 +34,9 @@ from export_routes import router as export_router, MinutesExportRequest, Attenda
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("minute-man")
 
-app = FastAPI(title="Minute Man API", version="1.0.0")
+APP_VERSION = "2.1.0"
+
+app = FastAPI(title="Minute Man API", version=APP_VERSION)
 
 # CORS — which website origins are allowed to call this API from a browser.
 # Controlled by the ALLOWED_ORIGINS env var (comma-separated). This keeps the
@@ -47,10 +49,13 @@ _default_origins = "https://minute-man.pages.dev,http://localhost:8080,http://12
 _origins_env = os.getenv("ALLOWED_ORIGINS", _default_origins)
 allowed_origins = [o.strip() for o in _origins_env.split(",") if o.strip()]
 
+# Note: the CORS spec forbids credentials with a "*" wildcard origin (browsers
+# silently reject that combination). This app never uses cookies or auth
+# headers cross-origin, so credentials stay off — which also makes "*" valid.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -77,6 +82,7 @@ class MinutesRequest(BaseModel):
 def health_check():
     return {
         "status": "ok",
+        "version": APP_VERSION,
         "default_provider": os.getenv("DEFAULT_PROVIDER", "anthropic"),
         "anthropic_key": bool(os.getenv("ANTHROPIC_API_KEY")),
         "openai_key": bool(os.getenv("OPENAI_API_KEY")),

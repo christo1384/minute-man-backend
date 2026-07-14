@@ -182,7 +182,7 @@
     <button class="btn-second" id="homePrev" style="display:none">▶ Previous Meeting</button>
     <button class="btn-second" id="homeSettings">⚙ Crew &amp; Settings</button>
     <div class="a2hs" id="a2hs"></div>
-    <p class="foot">Health &amp; safety minutes for NZ construction.<br/>AI decision-support — a responsible person must review &amp; sign off.</p>
+    <p class="foot">Health &amp; safety minutes for NZ construction.<br/>AI decision-support — a responsible person must review &amp; sign off.<br/><span id="appVer" style="opacity:.55;font-size:.85em"></span></p>
   </div>
 </section>
 
@@ -439,8 +439,16 @@
 //                   Calls go to /api/minutes on the same address — no CORS, nothing to edit.
 //   "https://..." → a separate backend at that URL (e.g. Cloudflare page + Render backend).
 const BACKEND_URL = "SAME_ORIGIN";
+const APP_VERSION = "2.1";
 const backendConfigured = () => BACKEND_URL !== "";
 const apiBase = () => BACKEND_URL === "SAME_ORIGIN" ? "" : BACKEND_URL.replace(/\/+$/, "");
+// Wake the backend the moment the page opens (free hosting sleeps when idle,
+// and the first request after a sleep can take ~1 min). Fire-and-forget: by
+// the time the leader finishes Setup, the server is already awake, so
+// "Generate" responds fast instead of hanging on a cold start.
+if (backendConfigured()) {
+  try { fetch(apiBase() + '/api/health', { cache: 'no-store' }).catch(()=>{}); } catch(_){}
+}
 // ---------------------------------------------------------------------------
 const DEFAULT_CREW = ["Shane Adams","Pony Kenatale","Eddie M","Brian Smith","Militoni Tuakalau","Paula T","Edward Peckham","Nelsoni Tuione","Lorima","Benjamin Gimenez","Norma Aloa","Jake Wilson","Terence Jorgenson","Peter Duke","Frances Baleisasa","Fauta Iene","Jass Singh","John Smith","Frances Sanailo"].map(n=>({name:n,initials:""}));
 const state = { selected:new Set(), signatures:{}, meetingType:"Toolbox Talk", siteName:"", date:"", ledBy:"", decisions:[], usingBackend:false, extraction:null };
@@ -1019,6 +1027,8 @@ document.getElementById('pbStop').addEventListener('click',stopPlayback);
 document.getElementById('pbNew').addEventListener('click',()=>{ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); enterApp(1); });
 document.getElementById('playbackModal').addEventListener('click',e=>{ if(e.target===e.currentTarget){ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); } });
 refreshHomePrev();
+// Version stamp on the front door — makes it obvious which build is live.
+{ const v=document.getElementById('appVer'); if(v) v.textContent = 'v'+APP_VERSION+(backendConfigured()? '' : ' · offline demo'); }
 
 // Add-to-Home-Screen: iPhone shows instructions; Android offers a native prompt.
 const a2hs=document.getElementById('a2hs');
