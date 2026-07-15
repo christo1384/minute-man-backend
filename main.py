@@ -34,7 +34,7 @@ from export_routes import router as export_router, MinutesExportRequest, Attenda
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("minute-man")
 
-APP_VERSION = "2.1.0"
+APP_VERSION = "2.2.0"
 
 app = FastAPI(title="Minute Man API", version=APP_VERSION)
 
