@@ -26,7 +26,41 @@ from prompts import MINUTE_MAN_SYSTEM_PROMPT
 
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
+_gemini_model_cache: str | None = None  # discovered working model, kept for the process lifetime
+
+
+def _discover_gemini_model(key: str) -> str:
+    """Ask Google which models this key can use and pick the best flash one.
+
+    Runs only if the configured model 404s (Google retires model IDs over
+    time). Keeps the app working with zero config changes.
+    """
+    import urllib.request
+
+    req = urllib.request.Request(
+        "https://generativelanguage.googleapis.com/v1beta/models?pageSize=100",
+        headers={"x-goog-api-key": key},
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    names = [
+        m["name"].removeprefix("models/")
+        for m in data.get("models", [])
+        if "generateContent" in m.get("supportedGenerationMethods", [])
+    ]
+    flash = [n for n in names if "flash" in n]
+    # Prefer plain "gemini-N-flash" (newest first), then -latest aliases, then any flash.
+    import re
+    plain = sorted(
+        (n for n in flash if re.fullmatch(r"gemini-[0-9.]+-flash", n)),
+        key=lambda n: [int(x) for x in re.findall(r"\d+", n)],
+        reverse=True,
+    )
+    for candidate in (plain, [n for n in flash if n.endswith("-latest")], flash, names):
+        if candidate:
+            return candidate[0]
+    raise ValueError("No usable Gemini model found for this API key.")
 
 _EMPTY = {"hazards": [], "actions": [], "decisions": []}
 
@@ -84,29 +118,43 @@ def _call_gemini(transcript: str) -> str:
     import urllib.request
     import urllib.error
 
+    global _gemini_model_cache
     key = os.environ["GEMINI_API_KEY"]  # KeyError -> 400 "missing key" upstream
-    url = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{GEMINI_MODEL}:generateContent"
-    )
-    body = json.dumps({
-        "system_instruction": {"parts": [{"text": MINUTE_MAN_SYSTEM_PROMPT}]},
-        "contents": [{"role": "user", "parts": [{"text": transcript}]}],
-        # Ask Gemini for raw JSON so _parse_json has nothing to strip.
-        "generationConfig": {"response_mime_type": "application/json"},
-    }).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=body,
-        headers={"Content-Type": "application/json", "x-goog-api-key": key},
-        method="POST",
-    )
-    try:
+
+    def _post(model: str):
+        url = (
+            "https://generativelanguage.googleapis.com/v1beta/models/"
+            f"{model}:generateContent"
+        )
+        body = json.dumps({
+            "system_instruction": {"parts": [{"text": MINUTE_MAN_SYSTEM_PROMPT}]},
+            "contents": [{"role": "user", "parts": [{"text": transcript}]}],
+            # Ask Gemini for raw JSON so _parse_json has nothing to strip.
+            "generationConfig": {"response_mime_type": "application/json"},
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=body,
+            headers={"Content-Type": "application/json", "x-goog-api-key": key},
+            method="POST",
+        )
         with urllib.request.urlopen(req, timeout=90) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+            return json.loads(resp.read().decode("utf-8"))
+
+    try:
+        data = _post(_gemini_model_cache or GEMINI_MODEL)
     except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", "replace")[:300]
-        raise ValueError(f"Gemini API error {exc.code}: {detail}") from exc
+        if exc.code == 404:
+            # Configured model retired by Google — discover a current one and retry.
+            _gemini_model_cache = _discover_gemini_model(key)
+            try:
+                data = _post(_gemini_model_cache)
+            except urllib.error.HTTPError as exc2:
+                detail = exc2.read().decode("utf-8", "replace")[:300]
+                raise ValueError(f"Gemini API error {exc2.code}: {detail}") from exc2
+        else:
+            detail = exc.read().decode("utf-8", "replace")[:300]
+            raise ValueError(f"Gemini API error {exc.code}: {detail}") from exc
     try:
         return data["candidates"][0]["content"]["parts"][0]["text"]
     except (KeyError, IndexError) as exc:
