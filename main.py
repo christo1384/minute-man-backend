@@ -74,7 +74,7 @@ class MinutesRequest(BaseModel):
     site_name: Optional[str] = ""
     meeting_date: Optional[str] = ""
     led_by: Optional[str] = ""
-    provider: Optional[str] = None  # "anthropic" | "openai" | "demo"; falls back to DEFAULT_PROVIDER
+    provider: Optional[str] = None  # "anthropic" | "gemini" | "openai" | "demo"; falls back to DEFAULT_PROVIDER
     attendance: List[AttendanceEntry] = []
 
 
@@ -85,6 +85,7 @@ def health_check():
         "version": APP_VERSION,
         "default_provider": os.getenv("DEFAULT_PROVIDER", "anthropic"),
         "anthropic_key": bool(os.getenv("ANTHROPIC_API_KEY")),
+        "gemini_key": bool(os.getenv("GEMINI_API_KEY")),
         "openai_key": bool(os.getenv("OPENAI_API_KEY")),
     }
 

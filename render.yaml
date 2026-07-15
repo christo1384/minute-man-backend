@@ -2,10 +2,11 @@
 # Connect this folder as a repo and Render reads this file and sets everything up.
 #
 # As shipped this deploys the FREE, KEYLESS demo build — one click, nothing to fill
-# in, $0 — so you get a shareable link immediately. To switch on real Claude AI later:
-#   Render dashboard → your service → Environment →
-#     set DEFAULT_PROVIDER = anthropic, and add ANTHROPIC_API_KEY = sk-ant-...
-#   then Manual Deploy. (Never put the key in this file.)
+# in, $0 — so you get a shareable link immediately. To switch on real AI later:
+#   FREE:  get a key at https://aistudio.google.com (no card), then Render dashboard →
+#          your service → Environment → set DEFAULT_PROVIDER = gemini, add GEMINI_API_KEY.
+#   PAID (best quality): set DEFAULT_PROVIDER = anthropic, add ANTHROPIC_API_KEY = sk-ant-...
+#   (Never put a key in this file.)
 services:
   - type: web
     name: minute-man-api

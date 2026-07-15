@@ -6,8 +6,11 @@ with MINUTE_MAN_SYSTEM_PROMPT and returns a parsed dict:
     { "hazards": [...], "actions": [...], "decisions": [...] }
 
 Providers:
-  - "anthropic" : Claude (needs ANTHROPIC_API_KEY)
-  - "openai"    : GPT   (needs OPENAI_API_KEY)
+  - "anthropic" : Claude (needs ANTHROPIC_API_KEY — paid, ~1-2c per transcript)
+  - "gemini"    : Google Gemini (needs GEMINI_API_KEY — free tier available at
+                  https://aistudio.google.com, no credit card; plenty for
+                  toolbox-talk volumes)
+  - "openai"    : GPT   (needs OPENAI_API_KEY — paid)
   - "demo"      : no API key required — a simple keyword-based extractor so the
                   whole pipeline can be run and tested offline before you add a
                   real key. NOT for production use.
@@ -23,6 +26,7 @@ from prompts import MINUTE_MAN_SYSTEM_PROMPT
 
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 _EMPTY = {"hazards": [], "actions": [], "decisions": []}
 
@@ -68,6 +72,45 @@ def _call_anthropic(transcript: str) -> str:
         messages=[{"role": "user", "content": transcript}],
     )
     return "".join(block.text for block in msg.content if block.type == "text")
+
+
+def _call_gemini(transcript: str) -> str:
+    """Google Gemini via plain REST (no SDK needed — stdlib only).
+
+    Free-tier friendly: get a key at https://aistudio.google.com (no card).
+    Model is read from GEMINI_MODEL (default gemini-2.5-flash); bump the env
+    var if Google retires the model — no code change needed.
+    """
+    import urllib.request
+    import urllib.error
+
+    key = os.environ["GEMINI_API_KEY"]  # KeyError -> 400 "missing key" upstream
+    url = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{GEMINI_MODEL}:generateContent"
+    )
+    body = json.dumps({
+        "system_instruction": {"parts": [{"text": MINUTE_MAN_SYSTEM_PROMPT}]},
+        "contents": [{"role": "user", "parts": [{"text": transcript}]}],
+        # Ask Gemini for raw JSON so _parse_json has nothing to strip.
+        "generationConfig": {"response_mime_type": "application/json"},
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={"Content-Type": "application/json", "x-goog-api-key": key},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=90) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")[:300]
+        raise ValueError(f"Gemini API error {exc.code}: {detail}") from exc
+    try:
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError) as exc:
+        raise ValueError(f"Unexpected Gemini response shape: {str(data)[:300]}") from exc
 
 
 def _call_openai(transcript: str) -> str:
@@ -139,6 +182,7 @@ def _call_demo(transcript: str) -> str:
 
 _PROVIDERS = {
     "anthropic": _call_anthropic,
+    "gemini": _call_gemini,
     "openai": _call_openai,
     "demo": _call_demo,
 }
@@ -149,6 +193,6 @@ def extract_minutes(transcript: str, provider: str | None = None) -> dict:
     provider = (provider or os.getenv("DEFAULT_PROVIDER", "anthropic")).lower()
     caller = _PROVIDERS.get(provider)
     if caller is None:
-        raise ValueError(f"Unknown provider '{provider}'. Use anthropic, openai, or demo.")
+        raise ValueError(f"Unknown provider '{provider}'. Use anthropic, gemini, openai, or demo.")
     raw = caller(transcript)
     return _parse_json(raw)
