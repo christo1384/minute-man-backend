@@ -156,9 +156,21 @@ def _call_gemini(transcript: str) -> str:
             detail = exc.read().decode("utf-8", "replace")[:300]
             raise ValueError(f"Gemini API error {exc.code}: {detail}") from exc
     try:
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+        parts = data["candidates"][0]["content"]["parts"]
+        # Newer Gemini models can return several parts, including "thought"
+        # (reasoning) parts — keep only real answer text and join the rest.
+        text = "".join(
+            p.get("text", "")
+            for p in parts
+            if isinstance(p, dict) and not p.get("thought")
+        )
+        if not text.strip():  # everything was thoughts? fall back to all text
+            text = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
+        if not text.strip():
+            raise ValueError(f"Gemini returned no text. Raw: {str(data)[:400]}")
+        return text
     except (KeyError, IndexError) as exc:
-        raise ValueError(f"Unexpected Gemini response shape: {str(data)[:300]}") from exc
+        raise ValueError(f"Unexpected Gemini response shape: {str(data)[:400]}") from exc
 
 
 def _call_openai(transcript: str) -> str:
