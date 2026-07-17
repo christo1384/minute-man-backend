@@ -4,5 +4,7 @@ pydantic>=2.6
 python-dotenv>=1.0
 reportlab>=4.1
 openpyxl>=3.1
+sqlalchemy>=2.0
+psycopg2-binary>=2.9   # only used when DATABASE_URL points at PostgreSQL (e.g. Neon)
 anthropic>=0.39
 openai>=1.40

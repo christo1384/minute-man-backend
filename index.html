@@ -158,6 +158,28 @@
   @media(max-width:600px){.crewrow,.crewhead{grid-template-columns:1fr 76px 30px}}
   .modal .actions{display:flex;gap:10px;margin-top:20px}
   .modal .actions .btn{flex:1;min-height:48px}
+  /* --- v3: template picker (Setup screen) --- */
+  .tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:600px){.tpl-grid{grid-template-columns:1fr}}
+  .tpl{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;
+    border:2px solid var(--line);border-radius:12px;background:#fff;padding:16px;cursor:pointer;font-family:inherit;transition:border-color .15s}
+  .tpl.sel{border-color:var(--orange);background:#fff7ed}
+  .tpl .tpl-ic{font-size:26px}
+  .tpl .tpl-t{font-size:16px;font-weight:800;color:var(--slate)}
+  .tpl .tpl-d{font-size:12.5px;color:var(--muted);line-height:1.4}
+  /* --- v3: meeting register --- */
+  .reg-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;margin-top:6px}
+  .reg-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border:2px solid var(--line);
+    border-radius:10px;padding:10px 14px;background:#fff;cursor:pointer;font-family:inherit;text-align:left;width:100%}
+  .reg-row:hover{border-color:var(--orange)}
+  .reg-row .rr-main{font-size:14.5px;font-weight:700;color:var(--slate)}
+  .reg-row .rr-sub{font-size:12px;color:var(--muted)}
+  .reg-badge{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;border-radius:999px;padding:3px 9px;flex-shrink:0}
+  .reg-badge.safety{background:#fff7ed;color:var(--orange-d);border:1px solid var(--orange)}
+  .reg-badge.general{background:#eef2f2;color:var(--slate);border:1px solid #d5dede}
+  .savefeed{font-size:13px;margin-top:8px;font-weight:600}
+  .savefeed.ok{color:#15803d}
+  .savefeed.err{color:#c02626}
   @media print{
     header.app,.steps,.noprint{display:none!important}
     body{background:#fff}
@@ -179,6 +201,7 @@
   </div>
   <div class="home-actions">
     <button class="btn-hero" id="homeNew">＋ New Meeting</button>
+    <button class="btn-second" id="homeRegister" style="display:none">🗂 Meeting Register</button>
     <button class="btn-second" id="homePrev" style="display:none">▶ Previous Meeting</button>
     <button class="btn-second" id="homeSettings">⚙ Crew &amp; Settings</button>
     <div class="a2hs" id="a2hs"></div>
@@ -207,18 +230,37 @@
 <main>
   <!-- ============ SCREEN 1: SETUP ============ -->
   <section id="screen1">
+    <!-- v3: template picker — drives which sections show on Confirm & Record -->
+    <div class="card">
+      <h2>Meeting Template</h2>
+      <p class="sub">Pick the kind of record to build. This decides which sections appear on the Confirm and Record screens.</p>
+      <div class="tpl-grid">
+        <button type="button" class="tpl sel" id="tplSafety">
+          <span class="tpl-ic">🦺</span>
+          <span class="tpl-t">Safety / Toolbox Talk</span>
+          <span class="tpl-d">Incidents reviewed, hazards &amp; HSWA controls, actions, decisions, minutes summary.</span>
+        </button>
+        <button type="button" class="tpl" id="tplGeneral">
+          <span class="tpl-ic">📋</span>
+          <span class="tpl-t">General Meeting</span>
+          <span class="tpl-d">Summary of the discussion, actions with owners, decisions. No hazard analysis.</span>
+        </button>
+      </div>
+    </div>
+
     <div class="card">
       <h2>Meeting Details</h2>
       <p class="sub">Set up the record before capturing the discussion.</p>
       <div class="grid2">
         <div>
-          <label class="fl" for="meetingType">Meeting Type</label>
+          <label class="fl" for="meetingType" id="meetingTypeLabel">Meeting Type</label>
           <select id="meetingType">
             <option>Toolbox Talk</option>
             <option>Pre-start</option>
             <option>Site Progress</option>
             <option>H&amp;S Review</option>
           </select>
+          <input type="text" id="meetingTypeText" class="hidden" placeholder="e.g. Project Catch-up" />
         </div>
         <div>
           <label class="fl" for="siteName">Site / Job Name</label>
@@ -267,8 +309,9 @@
       <div class="interim" id="interim"></div>
 
       <div class="row" style="margin-bottom:14px">
-        <button class="chip" onclick="loadDemo(1)">▶ Demo 1 — Toolbox Talk (wet weather)</button>
-        <button class="chip" onclick="loadDemo(2)">▶ Demo 2 — Pre-start (hot work / grinder)</button>
+        <button class="chip demo-safety" onclick="loadDemo(1)">▶ Demo 1 — Toolbox Talk (wet weather)</button>
+        <button class="chip demo-safety" onclick="loadDemo(2)">▶ Demo 2 — Pre-start (hot work / grinder)</button>
+        <button class="chip demo-general hidden" onclick="loadDemo(3)">▶ Demo — General Meeting (project catch-up)</button>
       </div>
 
       <label class="fl" for="transcript">Transcript</label>
@@ -290,11 +333,10 @@
     </div>
 
     <div class="card">
-      <span class="rb-h">What we covered — hazards &amp; controls</span>
-      <ul class="rb" id="rbHaz"></ul>
-
-      <span class="rb-h orange">Actions &amp; follow-ups — confirm the owner and the date</span>
-      <ul class="rb" id="rbAct"></ul>
+      <!-- v3: read-back sections are built per template —
+           safety: incidents → hazards → actions → decisions → summary
+           general: summary → actions → decisions -->
+      <div id="rbSections"></div>
 
       <p class="meta" id="rbAtt" style="margin-top:14px"></p>
 
@@ -319,7 +361,10 @@
         <button class="btn btn-slate" onclick="window.print()">⤓ Download / Print PDF</button>
         <button class="btn btn-ghost" id="csvBtn">⤓ Export to CSV / Excel</button>
         <button class="btn btn-ghost" id="shareBtn">⤴ Share / Send</button>
+        <button class="btn btn-primary" id="saveRegBtn" style="width:auto">🗂 Save to Register</button>
       </div>
+      <p class="savefeed" id="saveRegStatus"></p>
+      <p class="meta hidden" id="saveRegOffline">Save to Register needs the Minute Man server — this offline demo keeps only a local snapshot for “Previous Meeting” playback.</p>
     </div>
 
     <div class="card" style="padding:0;overflow:hidden">
@@ -335,7 +380,16 @@
           <div class="mf"><label>Present</label><div class="v" id="shCount">0</div></div>
         </div>
 
-        <div class="sect">
+        <div class="sect" id="incSect">
+          <h3>Incidents Reviewed</h3>
+          <table class="ftable" id="incTable">
+            <thead><tr><th style="width:40%">Description</th><th style="width:18%">Severity</th><th style="width:38%">Review outcome</th><th style="width:16px"></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <button class="addrow" onclick="addInc()">+ Add incident</button>
+        </div>
+
+        <div class="sect" id="hazSect">
           <h3>Hazards &amp; Controls Discussed</h3>
           <table class="ftable" id="hazTable">
             <thead><tr><th style="width:28%">Hazard</th><th style="width:30%">Control</th><th style="width:18%">Tier</th><th style="width:22%">HSWA note</th><th style="width:16px"></th></tr></thead>
@@ -344,7 +398,7 @@
           <button class="addrow" onclick="addHaz()">+ Add hazard</button>
         </div>
 
-        <div class="sect">
+        <div class="sect" id="actSect">
           <h3>Actions Agreed</h3>
           <table class="ftable" id="actTable">
             <thead><tr><th style="width:24%">Who</th><th style="width:52%">What</th><th style="width:24%">By when</th><th style="width:16px"></th></tr></thead>
@@ -353,13 +407,27 @@
           <button class="addrow" onclick="addAct()">+ Add action</button>
         </div>
 
+        <div class="sect" id="decSect">
+          <h3>Decisions Made</h3>
+          <table class="ftable" id="decTable">
+            <thead><tr><th>Decision</th><th style="width:16px"></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <button class="addrow" onclick="addDec()">+ Add decision</button>
+        </div>
+
+        <div class="sect" id="sumSect">
+          <h3 id="sumHeading">Minutes Summary</h3>
+          <div class="notes" contenteditable id="shSummary"></div>
+        </div>
+
         <div class="sect" id="notesSect">
           <h3>Discussion Notes</h3>
           <div class="notes" contenteditable id="shNotes"></div>
         </div>
 
-        <div class="sect">
-          <h3>Attendance &amp; Sign-off</h3>
+        <div class="sect" id="attSect">
+          <h3 id="attHeading">Attendance &amp; Sign-off</h3>
           <div class="signgrid" id="signGrid"></div>
         </div>
 
@@ -422,6 +490,34 @@
   </div>
 </div>
 
+<!-- ============ MEETING REGISTER MODAL (v3) ============ -->
+<div class="modal hidden" id="registerModal">
+  <div class="panel">
+    <h2>Meeting Register</h2>
+    <p class="sub" id="regStatus">Loading saved meetings…</p>
+    <div class="reg-list" id="regList"></div>
+    <div class="actions">
+      <button class="btn btn-ghost" id="regClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SAVED MEETING VIEW MODAL (v3) ============ -->
+<div class="modal hidden" id="meetingViewModal">
+  <div class="panel">
+    <h2 id="mvTitle">Meeting</h2>
+    <p class="sub" id="mvMeta">—</p>
+    <div id="mvBody" style="max-height:300px;overflow-y:auto;font-size:14px;line-height:1.5"></div>
+    <p class="meta" id="mvStatus" style="margin-top:10px"></p>
+    <div class="actions" style="flex-wrap:wrap">
+      <button class="btn btn-ghost" id="mvPlay" type="button">▶ Play back</button>
+      <button class="btn btn-ghost" id="mvPdf" type="button">⤓ PDF</button>
+      <button class="btn btn-ghost" id="mvXlsx" type="button">⤓ Excel</button>
+      <button class="btn btn-primary" id="mvClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ---------------------------------------------------------------------------
 // BACKEND CONFIG
@@ -439,7 +535,7 @@
 //                   Calls go to /api/minutes on the same address — no CORS, nothing to edit.
 //   "https://..." → a separate backend at that URL (e.g. Cloudflare page + Render backend).
 const BACKEND_URL = "SAME_ORIGIN";
-const APP_VERSION = "2.2";
+const APP_VERSION = "3.0";
 const backendConfigured = () => BACKEND_URL !== "";
 const apiBase = () => BACKEND_URL === "SAME_ORIGIN" ? "" : BACKEND_URL.replace(/\/+$/, "");
 // Wake the backend the moment the page opens (free hosting sleeps when idle,
@@ -451,7 +547,7 @@ if (backendConfigured()) {
 }
 // ---------------------------------------------------------------------------
 const DEFAULT_CREW = ["Shane Adams","Pony Kenatale","Eddie M","Brian Smith","Militoni Tuakalau","Paula T","Edward Peckham","Nelsoni Tuione","Lorima","Benjamin Gimenez","Norma Aloa","Jake Wilson","Terence Jorgenson","Peter Duke","Frances Baleisasa","Fauta Iene","Jass Singh","John Smith","Frances Sanailo"].map(n=>({name:n,initials:""}));
-const state = { selected:new Set(), signatures:{}, meetingType:"Toolbox Talk", siteName:"", date:"", ledBy:"", decisions:[], usingBackend:false, extraction:null };
+const state = { selected:new Set(), signatures:{}, template:"safety", meetingType:"Toolbox Talk", siteName:"", date:"", ledBy:"", decisions:[], usingBackend:false, extraction:null, lastSavedId:null };
 
 // --- Saved settings (per-device, localStorage) -----------------------------
 const SETTINGS_KEY = "minuteman_settings_v1";
@@ -485,6 +581,7 @@ async function fetchMinutesFromBackend(){
     site_name: state.siteName,
     meeting_date: state.date,
     led_by: state.ledBy,
+    template: state.template,   // v3: "safety" | "general"
     attendance
   };
   const res = await fetch(apiBase()+'/api/minutes',{
@@ -501,12 +598,16 @@ async function fetchMinutesFromBackend(){
 // (tier / note / when). Do the mapping HERE, at the fetch boundary.
 function normalizeMinutes(m){
   return {
+    template: m.template || state.template,
     type: m.meeting_type || state.meetingType,
     site: m.site_name || state.siteName,
     led: state.ledBy,
+    incidents: (m.incidents||[]).map(i=>({description:i.description, severity:i.severity||'not stated', outcome:i.outcome||''})),
     hazards: (m.hazards||[]).map(h=>({hazard:h.hazard, control:h.control, tier:h.control_tier, note:h.compliance_note})),
     actions: (m.actions||[]).map(a=>({who:a.who, what:a.what, when:a.by_when})),
-    decisions: m.decisions||[]
+    decisions: m.decisions||[],
+    summary: m.summary||'',
+    topics: m.topics||[]
   };
 }
 
@@ -558,7 +659,29 @@ actions:[
  {who:"John Smith",what:"Tell site super Riverside steel is Thursday not tomorrow",when:"Done — confirm"},
  {who:"Lorima",what:"Fire-watch gear at the tank before Peter starts welding",when:"Before hot work"},
  {who:"Terence Jorgenson",what:"Set 30-min fire-watch after-check timer",when:"During welding"}
-]}
+]},
+// v3: the one general-meeting demo (transcript + canned extraction, offline-friendly)
+3:{ template:"general", type:"Project Catch-up", site:"Office / Riverside Job", led:"Jason George",
+speakers:["Jason George","Christina Fa'aui","Ben Gaston","Andrew Kelly"],
+text:`Jason: right, quick catch-up on Riverside. Steel delivery got pushed to Thursday so the programme moves a week. Christina can you update the schedule and send it round.
+Christina: yep, I'll have the revised schedule out by Friday.
+Ben: budget's tracking okay but the crane hire quote came in higher than we allowed, about eight percent over.
+Jason: get a second quote before we commit. Ben, that's yours, this week.
+Ben: will do.
+Andrew: the client asked about the variation for the extra mezzanine steel. We need that confirmed in writing before we order material.
+Jason: agreed. Andrew, confirm the variation scope with the client in writing before Friday. And on staffing, we said we'd take on an apprentice for the workshop.
+Christina: advert's drafted, just needs sign-off.
+Jason: sign-off's done, run the ad. Okay, that's everything.`,
+general:{
+  summary:"The catch-up covered the Riverside programme, budget, a client variation and staffing. The steel delivery has moved to Thursday, shifting the programme by a week; a revised schedule will be circulated by Friday. The crane-hire quote came in about eight percent over allowance, so a second quote will be sought before committing.\n\nThe client's variation for the extra mezzanine steel must be confirmed in writing before material is ordered. The apprentice advert was approved and will be run.",
+  topics:["Riverside programme / steel delivery","Budget — crane hire quote","Client variation (mezzanine steel)","Staffing — apprentice"],
+  actions:[
+    {who:"Christina Fa'aui",what:"Update the Riverside schedule and circulate it",when:"Friday"},
+    {who:"Ben Gaston",what:"Get a second crane-hire quote before committing",when:"This week"},
+    {who:"Andrew Kelly",what:"Confirm the mezzanine variation scope with the client in writing",when:"Before Friday"}
+  ],
+  decisions:["Programme moves a week — steel delivery now Thursday.","Seek a second crane-hire quote before committing.","Apprentice advert approved — run the ad."]
+}}
 };
 
 // ---------- Screen 1: attendees ----------
@@ -611,6 +734,36 @@ document.getElementById('siteName').addEventListener('input',e=>state.siteName=e
 document.getElementById('meetingDate').addEventListener('input',e=>state.date=e.target.value);
 document.getElementById('ledBy').addEventListener('input',e=>state.ledBy=e.target.value);
 
+// ---------- v3: template picker ---------------------------------------------
+// The chosen template travels through the whole pipeline as
+// template: "safety" | "general" and drives which sections show on the
+// Confirm and Record screens (and which demo buttons appear).
+const tplSafetyBtn=document.getElementById('tplSafety'), tplGeneralBtn=document.getElementById('tplGeneral');
+function setTemplate(tpl){
+  state.template=tpl;
+  tplSafetyBtn.classList.toggle('sel', tpl==='safety');
+  tplGeneralBtn.classList.toggle('sel', tpl==='general');
+  // Meeting-type field: dropdown for safety, free text for general.
+  const sel=document.getElementById('meetingType'), txt=document.getElementById('meetingTypeText');
+  const lbl=document.getElementById('meetingTypeLabel');
+  if(tpl==='general'){
+    sel.classList.add('hidden'); txt.classList.remove('hidden');
+    lbl.setAttribute('for','meetingTypeText'); lbl.textContent='Meeting type';
+    state.meetingType = txt.value.trim() || 'General Meeting';
+  } else {
+    txt.classList.add('hidden'); sel.classList.remove('hidden');
+    lbl.setAttribute('for','meetingType'); lbl.textContent='Meeting Type';
+    state.meetingType = sel.value;
+  }
+  // Demo buttons follow the template.
+  document.querySelectorAll('.demo-safety').forEach(b=>b.classList.toggle('hidden', tpl!=='safety'));
+  document.querySelectorAll('.demo-general').forEach(b=>b.classList.toggle('hidden', tpl!=='general'));
+}
+tplSafetyBtn.addEventListener('click',()=>setTemplate('safety'));
+tplGeneralBtn.addEventListener('click',()=>setTemplate('general'));
+document.getElementById('meetingTypeText').addEventListener('input',e=>{ state.meetingType=e.target.value.trim()||'General Meeting'; });
+setTemplate('safety');
+
 // ---------- Nav ----------
 function show(n){
   [1,2,3,4].forEach(i=>document.getElementById('screen'+i).classList.toggle('hidden',i!==n));
@@ -636,7 +789,10 @@ ta.addEventListener('input',()=>{ genBtn.disabled=ta.value.trim().length<15; loa
 
 function loadDemo(n){ const d=DEMOS[n];
   ta.value=d.text; loadedDemo=n; genBtn.disabled=false;
-  state.meetingType=d.type; document.getElementById('meetingType').value=d.type;
+  // v3: a demo also selects its template so the whole flow matches.
+  if((d.template||'safety')!==state.template) setTemplate(d.template||'safety');
+  if(d.template==='general'){ document.getElementById('meetingTypeText').value=d.type; state.meetingType=d.type; }
+  else { state.meetingType=d.type; document.getElementById('meetingType').value=d.type; }
   if(!state.siteName){state.siteName=d.site;document.getElementById('siteName').value=d.site;}
   if(!state.ledBy){state.ledBy=d.led;document.getElementById('ledBy').value=d.led;}
   d.speakers.forEach(name=>addAttendeeCard(name)); // ensure demo speakers exist even if trimmed from crew
@@ -644,7 +800,7 @@ function loadDemo(n){ const d=DEMOS[n];
     if(w){toggle(name,w);w.querySelector('.sigwrap input').value='(signed on site)';state.signatures[name]='(signed on site)';}}); }
   window.scrollTo({top:0,behavior:'smooth'});
 }
-function matchDemo(t){ if(t.includes("mud soup")||t.includes("crushed metal"))return 1; if(t.includes("hot work permit")||t.includes("bench grinder"))return 2; return null; }
+function matchDemo(t){ if(t.includes("mud soup")||t.includes("crushed metal"))return 1; if(t.includes("hot work permit")||t.includes("bench grinder"))return 2; if(t.includes("mezzanine")||t.includes("crane hire"))return 3; return null; }
 
 // --- Web Speech API live capture ---
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -701,13 +857,29 @@ genBtn.addEventListener('click',async()=>{
 
 // Offline generation: use the built-in demo match (or a blank editable record
 // for an unrecognised transcript). Preserves the original static-demo flow.
+// v3: normalises both demo shapes to the internal extraction shape
+// {template, incidents, hazards, actions, decisions, summary, topics}.
 function offlineGenerate(){
   const which=loadedDemo||matchDemo(ta.value);
   genBtn.innerHTML='Preparing record…'; genBtn.disabled=true;
   setTimeout(()=>{
     state.usingBackend=false;
-    state.extraction=which?DEMOS[which]:null;
-    state.decisions=[];
+    let ex=null;
+    if(which){
+      const d=DEMOS[which];
+      if(d.template==='general'){
+        ex={template:'general', type:d.type, site:d.site, led:d.led,
+            incidents:[], hazards:[],
+            actions:d.general.actions.slice(), decisions:d.general.decisions.slice(),
+            summary:d.general.summary, topics:d.general.topics.slice()};
+      } else {
+        ex={template:'safety', type:d.type, site:d.site, led:d.led,
+            incidents:[], hazards:d.hazards.slice(), actions:d.actions.slice(),
+            decisions:[], summary:'', topics:[]};
+      }
+    }
+    state.extraction=ex;
+    state.decisions=ex?(ex.decisions||[]).slice():[];
     buildReadback(state.extraction);
     genBtn.innerHTML='Review &amp; Confirm →'; genBtn.disabled=false;
     show(3);
@@ -715,16 +887,38 @@ function offlineGenerate(){
 }
 
 // ---------- Screen 3: build the read-back the leader reads aloud ----------
-function buildReadback(demo){
-  const H=document.getElementById('rbHaz'); H.innerHTML='';
-  if(demo && demo.hazards.length){ demo.hazards.forEach(h=>{
-    H.innerHTML+=`<li><b>${h.hazard}</b> — control agreed: ${h.control}. <em>(${h.tier})</em></li>`; });
-  } else { H.innerHTML='<li class="none">Nothing was auto-extracted from this transcript in the demo build — read the talk back to the group, then add hazards on the next screen.</li>'; }
-
-  const A=document.getElementById('rbAct'); A.innerHTML='';
-  if(demo && demo.actions.length){ demo.actions.forEach(a=>{
-    A.innerHTML+=`<li><b>${a.who}</b> — ${a.what} <em>(by ${a.when})</em></li>`; });
-  } else { A.innerHTML='<li class="none">No actions or follow-ups identified — confirm none are needed, or add them on the next screen.</li>'; }
+// v3: sections are template-driven —
+//   safety : incidents → hazards → actions → decisions → summary
+//   general: summary → actions → decisions
+function rbSection(title,orange,items,emptyText,fmt){
+  const h=`<span class="rb-h${orange?' orange':''}">${title}</span>`;
+  const lis=(items&&items.length)?items.map(fmt).join(''):`<li class="none">${emptyText}</li>`;
+  return h+`<ul class="rb" style="margin-bottom:16px">${lis}</ul>`;
+}
+function buildReadback(ex){
+  const S=document.getElementById('rbSections'); let html='';
+  const t=(ex&&ex.template)||state.template;
+  const fmtAct=a=>`<li><b>${a.who}</b> — ${a.what} <em>(by ${a.when})</em></li>`;
+  const fmtDec=d=>`<li>${d}</li>`;
+  const fmtSum=s=>`<li>${String(s).replace(/\n+/g,'<br/>')}</li>`;
+  if(t==='general'){
+    html+=rbSection('Meeting summary',false,(ex&&ex.summary)?[ex.summary]:[],
+      'No summary was auto-extracted — read the talk back and add anything missed below.',fmtSum);
+    html+=rbSection('Actions &amp; follow-ups — confirm the owner and the date',true,ex?ex.actions:[],
+      'No actions or follow-ups identified — confirm none are needed, or add them on the next screen.',fmtAct);
+    html+=rbSection('Decisions made',false,ex?ex.decisions:[],'No decisions recorded.',fmtDec);
+  } else {
+    html+=rbSection('Incidents reviewed',false,ex?ex.incidents:[],'No incidents were reviewed.',
+      i=>`<li><b>${i.description}</b> — ${i.outcome||''} <em>(${i.severity||'not stated'})</em></li>`);
+    html+=rbSection('What we covered — hazards &amp; controls',false,ex?ex.hazards:[],
+      'Nothing was auto-extracted from this transcript in the demo build — read the talk back to the group, then add hazards on the next screen.',
+      h=>`<li><b>${h.hazard}</b> — control agreed: ${h.control}. <em>(${h.tier})</em></li>`);
+    html+=rbSection('Actions &amp; follow-ups — confirm the owner and the date',true,ex?ex.actions:[],
+      'No actions or follow-ups identified — confirm none are needed, or add them on the next screen.',fmtAct);
+    html+=rbSection('Decisions made',false,ex?ex.decisions:[],'No decisions recorded.',fmtDec);
+    html+=rbSection('Minutes summary',false,(ex&&ex.summary)?[ex.summary]:[],'No summary was auto-extracted.',fmtSum);
+  }
+  S.innerHTML=html;
 
   document.getElementById('rbAtt').textContent=`${state.selected.size} attendee${state.selected.size===1?'':'s'} present and signed in.`;
   document.getElementById('rbAddNote').value='';
@@ -732,25 +926,55 @@ function buildReadback(demo){
   document.getElementById('toRecord').disabled=true;
 }
 
-// ---------- Screen 3: build the editable toolbox-talk sheet ----------
+// ---------- Screen 3: build the editable record sheet ----------
 function cell(txt,edit){ return `<td${edit?' contenteditable':''}>${txt||''}</td>`; }
+function incRow(i){ return `<tr>${cell(i.description,1)}${cell(i.severity,1)}${cell(i.outcome,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
 function hazRow(h){ return `<tr>${cell(h.hazard,1)}${cell(h.control,1)}<td contenteditable><span class="tier">${h.tier||''}</span></td>${cell(h.note,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
 function actRow(a){ return `<tr>${cell(a.who,1)}${cell(a.what,1)}${cell(a.when,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
+function decRow(d){ return `<tr>${cell(d,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
+function addInc(){ document.querySelector('#incTable tbody').insertAdjacentHTML('beforeend',incRow({description:'',severity:'',outcome:''})); }
 function addHaz(){ document.querySelector('#hazTable tbody').insertAdjacentHTML('beforeend',hazRow({hazard:'',control:'',tier:'',note:''})); }
 function addAct(){ document.querySelector('#actTable tbody').insertAdjacentHTML('beforeend',actRow({who:'',what:'',when:''})); }
+function addDec(){ document.querySelector('#decTable tbody').insertAdjacentHTML('beforeend',decRow('')); }
 
-function buildRecord(demo){
+function buildRecord(ex){
+  const t=(ex&&ex.template)||state.template;
+  const isGen = t==='general';
+  // v3: sheet title, section visibility and section ORDER follow the template.
+  //   safety : incidents, hazards, actions, decisions, summary, notes, attendance
+  //   general: attendees, summary, actions, decisions, notes (no hazards/incidents)
+  document.querySelector('.sheet-bar .t').textContent = isGen ? 'MEETING RECORD' : 'TOOLBOX TALK RECORD';
+  document.getElementById('incSect').classList.toggle('hidden', isGen);
+  document.getElementById('hazSect').classList.toggle('hidden', isGen);
+  document.getElementById('sumHeading').textContent = isGen ? 'Meeting Summary' : 'Minutes Summary';
+  document.getElementById('attHeading').textContent = isGen ? 'Attendees & Sign-off' : 'Attendance & Sign-off';
+  const sheet=document.getElementById('sheet'); const disc=sheet.querySelector('.disc');
+  const order = isGen
+    ? ['attSect','sumSect','actSect','decSect','notesSect','incSect','hazSect']
+    : ['incSect','hazSect','actSect','decSect','sumSect','notesSect','attSect'];
+  order.forEach(id=>sheet.insertBefore(document.getElementById(id), disc));
+
   document.getElementById('shType').textContent=state.meetingType;
   document.getElementById('shSite').textContent=state.siteName||'—';
   document.getElementById('shDate').textContent=state.date||'—';
-  document.getElementById('shLed').textContent=state.ledBy||(demo?demo.led:'—');
+  document.getElementById('shLed').textContent=state.ledBy||(ex?ex.led:'—');
   document.getElementById('shCount').textContent=state.selected.size;
 
+  const ib=document.querySelector('#incTable tbody'); ib.innerHTML='';
   const hb=document.querySelector('#hazTable tbody'); hb.innerHTML='';
   const ab=document.querySelector('#actTable tbody'); ab.innerHTML='';
-  if(demo){ demo.hazards.forEach(h=>hb.insertAdjacentHTML('beforeend',hazRow(h)));
-            demo.actions.forEach(a=>ab.insertAdjacentHTML('beforeend',actRow(a))); }
-  else { addHaz(); addAct(); }  // empty editable starter rows for live capture
+  const db=document.querySelector('#decTable tbody'); db.innerHTML='';
+  if(ex){
+    (ex.incidents||[]).forEach(i=>ib.insertAdjacentHTML('beforeend',incRow(i)));
+    (ex.hazards||[]).forEach(h=>hb.insertAdjacentHTML('beforeend',hazRow(h)));
+    (ex.actions||[]).forEach(a=>ab.insertAdjacentHTML('beforeend',actRow(a)));
+    (ex.decisions||[]).forEach(d=>db.insertAdjacentHTML('beforeend',decRow(d)));
+    document.getElementById('shSummary').textContent=ex.summary||'';
+  } else {
+    if(!isGen){ addHaz(); }   // empty editable starter rows for live capture (v2.2 behaviour)
+    addAct();
+    document.getElementById('shSummary').textContent='';
+  }
 
   // discussion notes: keep the raw transcript so live capture is never lost
   document.getElementById('shNotes').textContent = ta.value.trim();
@@ -760,7 +984,15 @@ function buildRecord(demo){
   Array.from(state.selected).forEach(n=>{ sg.insertAdjacentHTML('beforeend',
     `<div class="signrow"><span class="nm">${n}</span><span class="sg" contenteditable>${state.signatures[n]||'________'}</span></div>`); });
   if(state.selected.size===0) sg.innerHTML='<div class="signrow"><span class="nm" style="color:#94a3b8">No attendees selected on Setup.</span></div>';
-  saveLastMeetingSnapshot(demo);
+
+  // v3: Save-to-Register only when a backend is configured; offline shows why not.
+  const canSave=backendConfigured();
+  document.getElementById('saveRegBtn').classList.toggle('hidden', !canSave);
+  document.getElementById('saveRegOffline').classList.toggle('hidden', canSave);
+  const st=document.getElementById('saveRegStatus'); st.textContent=''; st.className='savefeed';
+  state.lastSavedId=null;
+
+  saveLastMeetingSnapshot(ex);
 }
 
 // ---------- Previous meeting playback ----------------------------------------
@@ -769,30 +1001,57 @@ function buildRecord(demo){
 // starting a new one. Deliberately excludes attendance — playback is a spoken
 // recap of what was discussed/agreed, not a roll call.
 const LAST_MEETING_KEY = 'minuteman_last_meeting_v1';
-function saveLastMeetingSnapshot(demo){
+function saveLastMeetingSnapshot(ex){
   const payload = {
+    template: (ex && ex.template) || state.template,
     meetingType: state.meetingType, siteName: state.siteName, date: state.date, ledBy: state.ledBy,
-    hazards: (demo && demo.hazards) ? demo.hazards.map(h=>({hazard:h.hazard, control:h.control, tier:h.tier})) : [],
-    actions: (demo && demo.actions) ? demo.actions.map(a=>({who:a.who, what:a.what, when:a.when})) : [],
-    decisions: state.decisions || []
+    incidents: (ex && ex.incidents) ? ex.incidents.map(i=>({description:i.description, severity:i.severity, outcome:i.outcome})) : [],
+    hazards: (ex && ex.hazards) ? ex.hazards.map(h=>({hazard:h.hazard, control:h.control, tier:h.tier})) : [],
+    actions: (ex && ex.actions) ? ex.actions.map(a=>({who:a.who, what:a.what, when:a.when})) : [],
+    decisions: state.decisions || [],
+    summary: (ex && ex.summary) || ''
   };
   try{ localStorage.setItem(LAST_MEETING_KEY, JSON.stringify(payload)); }catch(_){}
   refreshHomePrev();
 }
 function loadLastMeeting(){ try{ const raw=localStorage.getItem(LAST_MEETING_KEY); return raw?JSON.parse(raw):null; }catch(_){ return null; } }
 function hasLastMeeting(){ return !!loadLastMeeting(); }
-function refreshHomePrev(){ const btn=document.getElementById('homePrev'); if(btn) btn.style.display = hasLastMeeting() ? '' : 'none'; }
+// v3: with a backend configured the home screen offers the Meeting Register;
+// the localStorage "Previous Meeting" playback stays as the offline fallback.
+function refreshHomePrev(){
+  const prev=document.getElementById('homePrev'), reg=document.getElementById('homeRegister');
+  if(backendConfigured()){
+    if(reg) reg.style.display='';
+    if(prev) prev.style.display='none';
+  } else {
+    if(reg) reg.style.display='none';
+    if(prev) prev.style.display = hasLastMeeting() ? '' : 'none';
+  }
+}
 
 // Build the spoken script: section name, then a condensed sentence per item.
 // Skips attendance entirely, per spec. Condensed phrasing (matching the Confirm
 // read-back style) keeps total runtime to a few minutes even with a full set
 // of hazards/actions/decisions.
 function buildPlaybackScript(rec){
-  const parts=[`Previous meeting. ${rec.meetingType||'Toolbox Talk'}, ${rec.siteName||'site not recorded'}.`];
-  parts.push('Hazards and controls.');
-  if(rec.hazards && rec.hazards.length){
-    rec.hazards.forEach(h=>parts.push(`${h.hazard}. Control agreed: ${h.control}. ${h.tier||''}.`));
-  } else { parts.push('No hazards were recorded.'); }
+  // v3: template-aware section order (same order as the Confirm read-back).
+  //   safety : incidents → hazards → actions → decisions → summary
+  //   general: summary → actions → decisions
+  const isGen = rec.template==='general';
+  const parts=[`Previous meeting. ${rec.meetingType||(isGen?'Meeting':'Toolbox Talk')}, ${rec.siteName||'site not recorded'}.`];
+  if(!isGen){
+    parts.push('Incidents reviewed.');
+    if(rec.incidents && rec.incidents.length){
+      rec.incidents.forEach(i=>parts.push(`${i.description}. ${i.outcome||''}`));
+    } else { parts.push('No incidents were reviewed.'); }
+    parts.push('Hazards and controls.');
+    if(rec.hazards && rec.hazards.length){
+      rec.hazards.forEach(h=>parts.push(`${h.hazard}. Control agreed: ${h.control}. ${h.tier||''}.`));
+    } else { parts.push('No hazards were recorded.'); }
+  } else {
+    parts.push('Meeting summary.');
+    parts.push(rec.summary || 'No summary was recorded.');
+  }
   parts.push('Actions and follow ups.');
   if(rec.actions && rec.actions.length){
     rec.actions.forEach(a=>parts.push(`${a.who}. ${a.what}. By ${a.when}.`));
@@ -801,13 +1060,16 @@ function buildPlaybackScript(rec){
   if(rec.decisions && rec.decisions.length){
     rec.decisions.forEach(d=>parts.push(String(d)));
   } else { parts.push('No decisions were recorded.'); }
+  if(!isGen){
+    parts.push('Minutes summary.');
+    parts.push(rec.summary || 'No summary was recorded.');
+  }
   parts.push('End of previous meeting.');
   return parts;
 }
 
 let playbackActive=false;
-function playPrevious(){
-  const rec=loadLastMeeting();
+function playRec(rec){
   if(!rec) return;
   const statusEl=document.getElementById('pbStatus'), stopBtn=document.getElementById('pbStop');
   if(!('speechSynthesis' in window)){
@@ -838,13 +1100,15 @@ function stopPlayback(){
   if(statusEl) statusEl.textContent='Stopped.';
   if(stopBtn) stopBtn.style.display='none';
 }
-function openPlayback(){
-  const rec=loadLastMeeting();
+// v3: playback works for any record shape (localStorage snapshot OR a meeting
+// fetched from the server register) — never speaks attendance.
+function openPlaybackFor(rec){
   if(!rec) return;
   document.getElementById('pbMeta').textContent = `${rec.meetingType||'Meeting'} — ${rec.siteName||'—'} — ${rec.date||'—'}`;
   document.getElementById('playbackModal').classList.remove('hidden');
-  playPrevious();
+  playRec(rec);
 }
+function openPlayback(){ openPlaybackFor(loadLastMeeting()); }
 
 // ---------- Export -----------------------------------------------------------
 // Small helper: trigger a browser download for a Blob.
@@ -860,18 +1124,30 @@ function downloadBlob(blob,name){
 // exporter silently drops columns.
 function buildExportPayload(){
   const g=id=>document.getElementById(id).textContent.trim();
+  const isGen = state.template==='general';
+  const incidents=[];
+  document.querySelectorAll('#incTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');
+    if(c[0].textContent.trim()) incidents.push({description:c[0].textContent.trim(), severity:c[1].textContent.trim()||'not stated', outcome:c[2].textContent.trim()});});
   const hazards=[];
   document.querySelectorAll('#hazTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');
     hazards.push({hazard:c[0].textContent.trim(), control:c[1].textContent.trim(), control_tier:c[2].textContent.trim(), compliance_note:c[3].textContent.trim()});});
   const actions=[];
   document.querySelectorAll('#actTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');
     actions.push({who:c[0].textContent.trim(), what:c[1].textContent.trim(), by_when:c[2].textContent.trim()});});
+  const decisions=[];
+  document.querySelectorAll('#decTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');
+    const d=c[0].textContent.trim(); if(d) decisions.push(d);});
   const attendance=[];
   document.querySelectorAll('#signGrid .signrow').forEach(r=>{const nm=r.querySelector('.nm'),sg=r.querySelector('.sg');
     if(sg)attendance.push({name:nm.textContent.trim(), signature:sg.textContent.trim()});});
   return {
-    meeting_type:g('shType'), site_name:g('shSite'), meeting_date:g('shDate'),
-    hazards, actions, decisions:state.decisions||[], attendance
+    template: state.template,
+    meeting_type:g('shType'), site_name:g('shSite'), meeting_date:g('shDate'), led_by:g('shLed'),
+    summary: document.getElementById('shSummary').textContent.trim(),
+    topics: (state.extraction && state.extraction.topics) || [],
+    incidents: isGen?[]:incidents,
+    hazards: isGen?[]:hazards,
+    actions, decisions, attendance
   };
 }
 
@@ -880,10 +1156,19 @@ function csvString(){
   const g=id=>document.getElementById(id).textContent.trim();
   const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
   const rows=[['Minute Man — '+g('shType')+' Record'],['Site',g('shSite')],['Date',g('shDate')],['Led by',g('shLed')],['Present',g('shCount')],[]];
-  rows.push(['Hazards & Controls Discussed'],['Hazard','Control','Tier','HSWA note']);
-  document.querySelectorAll('#hazTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');rows.push([c[0].textContent,c[1].textContent,c[2].textContent.trim(),c[3].textContent]);});
-  rows.push([],['Actions Agreed'],['Who','What','By when']);
+  const isGen = state.template==='general';
+  if(!isGen){
+    rows.push(['Incidents Reviewed'],['Description','Severity','Review outcome']);
+    document.querySelectorAll('#incTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');rows.push([c[0].textContent,c[1].textContent,c[2].textContent]);});
+    rows.push([],['Hazards & Controls Discussed'],['Hazard','Control','Tier','HSWA note']);
+    document.querySelectorAll('#hazTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');rows.push([c[0].textContent,c[1].textContent,c[2].textContent.trim(),c[3].textContent]);});
+    rows.push([]);
+  }
+  rows.push(['Actions Agreed'],['Who','What','By when']);
   document.querySelectorAll('#actTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');rows.push([c[0].textContent,c[1].textContent,c[2].textContent]);});
+  rows.push([],['Decisions Made']);
+  document.querySelectorAll('#decTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');if(c[0].textContent.trim())rows.push([c[0].textContent]);});
+  rows.push([],[isGen?'Meeting Summary':'Minutes Summary'],[document.getElementById('shSummary').textContent]);
   rows.push([],['Discussion Notes'],[document.getElementById('shNotes').textContent]);
   rows.push([],['Attendance & Sign-off'],['Name','Signature']);
   document.querySelectorAll('#signGrid .signrow').forEach(r=>{const nm=r.querySelector('.nm'),sg=r.querySelector('.sg');if(sg)rows.push([nm.textContent,sg.textContent]);});
@@ -1016,6 +1301,142 @@ shareBtn.addEventListener('click',async()=>{
   alert('This device can’t open the share sheet, so the record was downloaded instead — attach it to an email or upload it to Drive.');
 });
 
+// ---------- v3: Save to Register (POST /api/meetings) -----------------------
+const saveRegBtn=document.getElementById('saveRegBtn'), saveRegStatus=document.getElementById('saveRegStatus');
+saveRegBtn.addEventListener('click',async()=>{
+  if(!backendConfigured()) return;
+  const p=buildExportPayload();
+  const body={
+    template:p.template, meeting_type:p.meeting_type, site_name:p.site_name,
+    meeting_date:p.meeting_date, led_by:p.led_by, summary:p.summary,
+    transcript:ta.value.trim(),
+    provider_used: state.usingBackend?'backend (server default)':'offline-demo',
+    confirmed_by_leader:true,   // the Confirm screen gate was passed to get here
+    app_version:APP_VERSION,
+    extra: p.template==='general' ? {topics:p.topics||[]} : {},
+    attendance:p.attendance, incidents:p.incidents, hazards:p.hazards,
+    actions:p.actions.filter(a=>a.what), decisions:p.decisions
+  };
+  const label=saveRegBtn.innerHTML; saveRegBtn.disabled=true; saveRegBtn.innerHTML='Saving…';
+  saveRegStatus.textContent=''; saveRegStatus.className='savefeed';
+  try{
+    const res=await fetch(apiBase()+'/api/meetings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!res.ok){ let detail=''; try{ const j=await res.json(); detail=j.detail?JSON.stringify(j.detail).slice(0,120):''; }catch(_){}
+      throw new Error(res.status+(detail?' — '+detail:'')); }
+    const saved=await res.json();
+    state.lastSavedId=saved.id;
+    saveRegStatus.textContent='✓ Saved to the register (meeting #'+saved.id+').';
+    saveRegStatus.className='savefeed ok';
+  }catch(err){
+    saveRegStatus.textContent='✕ Save failed ('+err.message+') — the record is still on this screen; try again.';
+    saveRegStatus.className='savefeed err';
+  }
+  saveRegBtn.innerHTML=label; saveRegBtn.disabled=false;
+});
+
+// ---------- v3: Meeting Register (list / view / play back / re-export) ------
+const registerModal=document.getElementById('registerModal'), regList=document.getElementById('regList'), regStatus=document.getElementById('regStatus');
+const meetingViewModal=document.getElementById('meetingViewModal');
+let mvMeeting=null;
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function plural(n,w){ return n+' '+w+(n===1?'':'s'); }
+async function openRegister(){
+  registerModal.classList.remove('hidden');
+  regList.innerHTML=''; regStatus.textContent='Loading saved meetings…';
+  try{
+    const res=await fetch(apiBase()+'/api/meetings?limit=50');
+    if(!res.ok) throw new Error('server returned '+res.status);
+    const data=await res.json(); const rows=data.meetings||[];
+    if(!rows.length){ regStatus.textContent='No meetings saved yet — finish a meeting and tap “Save to Register”.'; return; }
+    regStatus.textContent=plural(rows.length,'saved meeting')+' — newest first. Tap one to view, play back, or re-export.';
+    rows.forEach(r=>{
+      const counts = r.template==='general'
+        ? plural(r.action_count,'action')+' · '+plural(r.decision_count,'decision')
+        : plural(r.incident_count,'incident')+' · '+plural(r.hazard_count,'hazard')+' · '+plural(r.action_count,'action');
+      const b=document.createElement('button'); b.type='button'; b.className='reg-row';
+      b.innerHTML='<span><span class="rr-main">'+escapeHtml(r.meeting_type||'Meeting')+' — '+escapeHtml(r.site_name||'—')+'</span><br/>'
+        +'<span class="rr-sub">'+escapeHtml(r.meeting_date||'')+' · '+counts+'</span></span>'
+        +'<span class="reg-badge '+(r.template==='general'?'general':'safety')+'">'+(r.template==='general'?'General':'Safety')+'</span>';
+      b.addEventListener('click',()=>openMeetingView(r.id));
+      regList.appendChild(b);
+    });
+  }catch(err){ regStatus.textContent='Couldn’t load the register ('+err.message+').'; }
+}
+// Map a stored server meeting to the playback record shape (same fields the
+// localStorage snapshot uses — attendance deliberately never included).
+function storedToRec(m){
+  return {
+    template:m.template, meetingType:m.meeting_type, siteName:m.site_name, date:m.meeting_date, ledBy:m.led_by,
+    incidents:(m.incidents||[]).map(i=>({description:i.description, severity:i.severity, outcome:i.outcome})),
+    hazards:(m.hazards||[]).map(h=>({hazard:h.hazard, control:h.control, tier:h.control_tier})),
+    actions:(m.actions||[]).map(a=>({who:a.who, what:a.what, when:a.by_when})),
+    decisions:m.decisions||[], summary:m.summary||''
+  };
+}
+async function openMeetingView(id){
+  mvMeeting=null;
+  document.getElementById('mvTitle').textContent='Meeting #'+id;
+  document.getElementById('mvMeta').textContent='Loading…';
+  document.getElementById('mvBody').innerHTML='';
+  document.getElementById('mvStatus').textContent='';
+  meetingViewModal.classList.remove('hidden');
+  try{
+    const res=await fetch(apiBase()+'/api/meetings/'+id);
+    if(!res.ok) throw new Error('server returned '+res.status);
+    const m=await res.json(); mvMeeting=m;
+    const isGen=m.template==='general';
+    document.getElementById('mvTitle').textContent=(m.meeting_type||'Meeting')+' #'+m.id;
+    document.getElementById('mvMeta').textContent=(m.site_name||'—')+' — '+(m.meeting_date||'—')+' — led by '+(m.led_by||'—')+(isGen?' (General Meeting)':' (Safety / Toolbox Talk)');
+    let html='';
+    const sec=(t,items,fmt,empty)=>'<p style="margin:10px 0 2px"><b>'+t+'</b></p>'+((items&&items.length)?'<ul style="margin:4px 0 0;padding-left:20px">'+items.map(fmt).join('')+'</ul>':'<p style="margin:2px 0;color:#64748b">'+empty+'</p>');
+    if(!isGen){
+      html+=sec('Incidents reviewed',m.incidents,i=>'<li>'+escapeHtml(i.description)+' <em>('+escapeHtml(i.severity||'not stated')+')</em></li>','None.');
+      html+=sec('Hazards &amp; controls',m.hazards,h=>'<li>'+escapeHtml(h.hazard)+' — '+escapeHtml(h.control)+' <em>('+escapeHtml(h.control_tier)+')</em></li>','None.');
+    } else if(m.summary){
+      html+='<p style="margin:10px 0 2px"><b>Summary</b></p><p style="margin:2px 0;white-space:pre-wrap">'+escapeHtml(m.summary)+'</p>';
+    }
+    html+=sec('Actions',m.actions,a=>'<li><b>'+escapeHtml(a.who)+'</b> — '+escapeHtml(a.what)+' <em>(by '+escapeHtml(a.by_when)+')</em></li>','None.');
+    html+=sec('Decisions',m.decisions,d=>'<li>'+escapeHtml(d)+'</li>','None.');
+    if(!isGen && m.summary){
+      html+='<p style="margin:10px 0 2px"><b>Minutes summary</b></p><p style="margin:2px 0;white-space:pre-wrap">'+escapeHtml(m.summary)+'</p>';
+    }
+    html+=sec('Attendance',m.attendance,a=>'<li>'+escapeHtml(a.name)+(a.signature?' — '+escapeHtml(a.signature):'')+'</li>','None recorded.');
+    document.getElementById('mvBody').innerHTML=html;
+  }catch(err){ document.getElementById('mvMeta').textContent='Couldn’t load this meeting ('+err.message+').'; }
+}
+// Re-export a stored meeting exactly as it was saved (same document as the
+// original export because both go through the same /export/* endpoints).
+async function exportStored(kind){
+  if(!mvMeeting) return;
+  const m=mvMeeting, st=document.getElementById('mvStatus');
+  const payload={
+    template:m.template, meeting_type:m.meeting_type||'Meeting', site_name:m.site_name,
+    meeting_date:m.meeting_date, led_by:m.led_by||'', summary:m.summary||'',
+    topics:(m.extra&&m.extra.topics)||[],
+    incidents:(m.incidents||[]).map(i=>({description:i.description, severity:i.severity||'not stated', outcome:i.outcome||''})),
+    hazards:(m.hazards||[]).map(h=>({hazard:h.hazard, control:h.control, control_tier:h.control_tier, compliance_note:h.compliance_note})),
+    actions:(m.actions||[]).map(a=>({who:a.who, what:a.what, by_when:a.by_when})),
+    decisions:m.decisions||[],
+    attendance:(m.attendance||[]).map(a=>({name:a.name, signature:a.signature||''}))
+  };
+  st.textContent='Building '+(kind==='pdf'?'PDF':'Excel')+'…';
+  try{
+    const res=await fetch(apiBase()+'/export/'+kind,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!res.ok) throw new Error('server returned '+res.status);
+    const blob=await res.blob();
+    const base='minute-man-'+(payload.meeting_type||'record').toLowerCase().replace(/[^a-z0-9]+/g,'-');
+    downloadBlob(blob, base+(kind==='pdf'?'.pdf':'.xlsx'));
+    st.textContent='Downloaded.';
+  }catch(err){ st.textContent='Export failed ('+err.message+').'; }
+}
+document.getElementById('regClose').addEventListener('click',()=>registerModal.classList.add('hidden'));
+registerModal.addEventListener('click',e=>{ if(e.target===registerModal) registerModal.classList.add('hidden'); });
+document.getElementById('mvClose').addEventListener('click',()=>meetingViewModal.classList.add('hidden'));
+meetingViewModal.addEventListener('click',e=>{ if(e.target===meetingViewModal) meetingViewModal.classList.add('hidden'); });
+document.getElementById('mvPlay').addEventListener('click',()=>{ if(mvMeeting) openPlaybackFor(storedToRec(mvMeeting)); });
+document.getElementById('mvPdf').addEventListener('click',()=>exportStored('pdf'));
+document.getElementById('mvXlsx').addEventListener('click',()=>exportStored('excel'));
+
 // ---------- Home / front door + install ------------------------------------
 function enterApp(screen){ document.body.classList.remove('home-mode'); show(screen||1); }
 function goHome(){ document.body.classList.add('home-mode'); window.scrollTo({top:0}); refreshHomePrev(); }
@@ -1023,6 +1444,7 @@ document.getElementById('homeNew').addEventListener('click',()=>enterApp(1));
 document.getElementById('homeSettings').addEventListener('click',openSettings);
 document.getElementById('homeLogo').addEventListener('click',goHome);
 document.getElementById('homePrev').addEventListener('click',openPlayback);
+document.getElementById('homeRegister').addEventListener('click',openRegister);
 document.getElementById('pbStop').addEventListener('click',stopPlayback);
 document.getElementById('pbNew').addEventListener('click',()=>{ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); enterApp(1); });
 document.getElementById('playbackModal').addEventListener('click',e=>{ if(e.target===e.currentTarget){ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); } });
