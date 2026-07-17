@@ -180,6 +180,26 @@
   .savefeed{font-size:13px;margin-top:8px;font-weight:600}
   .savefeed.ok{color:#15803d}
   .savefeed.err{color:#c02626}
+  /* --- v4: action register + carry-over + site history --- */
+  .ar-controls{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
+  .ar-controls input,.ar-controls select{min-height:40px;font-size:13.5px;padding:6px 10px;flex:1;min-width:110px}
+  .ar-group{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--slate);margin:12px 0 4px}
+  .ar-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:6px;background:#fff}
+  .ar-row .ar-what{font-size:14px;font-weight:600;color:var(--ink)}
+  .ar-row .ar-meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .ar-due{font-size:11.5px;font-weight:800;border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .ar-due.overdue{background:#fee2e2;color:#c02626;border:1px solid #c02626}
+  .ar-due.nodate{background:#fef3c7;color:#92400e;border:1px solid #d97706}
+  .ar-due.dated{background:#eef2f2;color:var(--slate);border:1px solid #d5dede}
+  .ar-btn{min-height:34px;border-radius:8px;border:2px solid var(--slate);background:#fff;color:var(--slate);font-weight:700;font-size:12.5px;padding:0 12px;cursor:pointer}
+  .ar-btn:hover{background:var(--slate);color:#fff}
+  .ar-btn.close-btn{border-color:#15803d;color:#15803d}
+  .ar-btn.close-btn:hover{background:#15803d;color:#fff}
+  .tabbar{display:flex;gap:6px;margin-bottom:10px}
+  .tabbar .tab{flex:1;min-height:40px;border-radius:9px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:13.5px;color:var(--muted);cursor:pointer}
+  .tabbar .tab.on{border-color:var(--orange);color:var(--slate);background:#fff7ed}
+  #carryCard{border-color:var(--orange);background:#fff7ed}
+  #carryCard h2{display:flex;align-items:center;gap:8px}
   @media print{
     header.app,.steps,.noprint{display:none!important}
     body{background:#fff}
@@ -201,6 +221,7 @@
   </div>
   <div class="home-actions">
     <button class="btn-hero" id="homeNew">＋ New Meeting</button>
+    <button class="btn-second" id="homeActions" style="display:none">☑ Action Register</button>
     <button class="btn-second" id="homeRegister" style="display:none">🗂 Meeting Register</button>
     <button class="btn-second" id="homePrev" style="display:none">▶ Previous Meeting</button>
     <button class="btn-second" id="homeSettings">⚙ Crew &amp; Settings</button>
@@ -288,6 +309,13 @@
       </div>
       <p class="sub">Tap a name to add them, then capture their signature. Name and signature stay paired.</p>
       <div class="att-grid" id="attGrid"></div>
+    </div>
+
+    <!-- v4: carry-over — open actions from previous meetings at this site -->
+    <div class="card hidden" id="carryCard">
+      <h2>⚠ <span id="carryCount">0</span> open actions from previous meetings at this site</h2>
+      <p class="sub">Close the ones that are already done — the rest will be read out at Confirm and appear on the record as “Outstanding Actions (carried over)”.</p>
+      <div id="carryList"></div>
     </div>
 
     <button class="btn btn-primary" id="toCapture" disabled>Start Capturing Minutes →</button>
@@ -407,6 +435,14 @@
           <button class="addrow" onclick="addAct()">+ Add action</button>
         </div>
 
+        <div class="sect" id="carrySect">
+          <h3>Outstanding Actions (carried over)</h3>
+          <table class="ftable" id="carryTable">
+            <thead><tr><th style="width:22%">Who</th><th style="width:42%">What</th><th style="width:18%">Raised at</th><th style="width:18%"></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
         <div class="sect" id="decSect">
           <h3>Decisions Made</h3>
           <table class="ftable" id="decTable">
@@ -490,14 +526,63 @@
   </div>
 </div>
 
-<!-- ============ MEETING REGISTER MODAL (v3) ============ -->
+<!-- ============ MEETING REGISTER MODAL (v3; v4 adds search/archive/site history) ============ -->
 <div class="modal hidden" id="registerModal">
   <div class="panel">
     <h2>Meeting Register</h2>
-    <p class="sub" id="regStatus">Loading saved meetings…</p>
-    <div class="reg-list" id="regList"></div>
+    <div class="tabbar">
+      <button type="button" class="tab on" id="regTabMeetings">Meetings</button>
+      <button type="button" class="tab" id="regTabHistory">Site history</button>
+    </div>
+    <div id="regMeetingsPane">
+      <div class="ar-controls">
+        <input type="text" id="regSearch" placeholder="Search site / type…" />
+        <input type="text" id="regFrom" placeholder="From (YYYY-MM-DD)" style="max-width:150px" />
+        <input type="text" id="regTo" placeholder="To (YYYY-MM-DD)" style="max-width:150px" />
+      </div>
+      <label class="meta" style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <input type="checkbox" id="regArchived" style="width:16px;height:16px" /> Show archived
+      </label>
+      <p class="sub" id="regStatus">Loading saved meetings…</p>
+      <div class="reg-list" id="regList"></div>
+      <button class="addrow" id="regMore" type="button" style="display:none">Load more…</button>
+    </div>
+    <div id="regHistoryPane" class="hidden">
+      <div class="ar-controls">
+        <input type="text" id="histSite" list="histSiteList" placeholder="Site name…" />
+        <datalist id="histSiteList"></datalist>
+        <button type="button" class="ar-btn" id="histGo" style="min-height:40px">Show history</button>
+      </div>
+      <p class="sub" id="histStatus">Pick a site to see its meetings, recurring hazards and incidents.</p>
+      <div id="histBody" style="max-height:300px;overflow-y:auto;font-size:13.5px;line-height:1.5"></div>
+    </div>
     <div class="actions">
       <button class="btn btn-ghost" id="regClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ACTION REGISTER MODAL (v4) ============ -->
+<div class="modal hidden" id="actionRegModal">
+  <div class="panel">
+    <h2>Action Register</h2>
+    <p class="sub">Every action across every meeting — who owes what. Overdue first.</p>
+    <div class="ar-controls">
+      <select id="arStatus">
+        <option value="open" selected>Open</option>
+        <option value="closed">Closed</option>
+        <option value="all">All</option>
+      </select>
+      <input type="text" id="arSite" list="arSiteList" placeholder="Site…" />
+      <datalist id="arSiteList"></datalist>
+      <input type="text" id="arWho" placeholder="Person…" />
+      <input type="text" id="arSearch" placeholder="Search actions…" />
+    </div>
+    <p class="sub" id="arStatusLine">Loading…</p>
+    <div id="arList" style="max-height:320px;overflow-y:auto"></div>
+    <div class="actions" style="flex-wrap:wrap">
+      <button class="btn btn-ghost" id="arExport" type="button">⤓ Export this list (Excel)</button>
+      <button class="btn btn-primary" id="arClose" type="button">Close</button>
     </div>
   </div>
 </div>
@@ -535,7 +620,7 @@
 //                   Calls go to /api/minutes on the same address — no CORS, nothing to edit.
 //   "https://..." → a separate backend at that URL (e.g. Cloudflare page + Render backend).
 const BACKEND_URL = "SAME_ORIGIN";
-const APP_VERSION = "3.0";
+const APP_VERSION = "4.0";
 const backendConfigured = () => BACKEND_URL !== "";
 const apiBase = () => BACKEND_URL === "SAME_ORIGIN" ? "" : BACKEND_URL.replace(/\/+$/, "");
 // Wake the backend the moment the page opens (free hosting sleeps when idle,
@@ -547,7 +632,35 @@ if (backendConfigured()) {
 }
 // ---------------------------------------------------------------------------
 const DEFAULT_CREW = ["Shane Adams","Pony Kenatale","Eddie M","Brian Smith","Militoni Tuakalau","Paula T","Edward Peckham","Nelsoni Tuione","Lorima","Benjamin Gimenez","Norma Aloa","Jake Wilson","Terence Jorgenson","Peter Duke","Frances Baleisasa","Fauta Iene","Jass Singh","John Smith","Frances Sanailo"].map(n=>({name:n,initials:""}));
-const state = { selected:new Set(), signatures:{}, template:"safety", meetingType:"Toolbox Talk", siteName:"", date:"", ledBy:"", decisions:[], usingBackend:false, extraction:null, lastSavedId:null };
+const state = { selected:new Set(), signatures:{}, template:"safety", meetingType:"Toolbox Talk", siteName:"", date:"", ledBy:"", decisions:[], usingBackend:false, extraction:null, lastSavedId:null,
+  carriedOver:[],      // v4: open actions from previous meetings at this site (register rows)
+  providerUsed:"",     // v4: echoed by /api/minutes
+  closedByName:"" };   // v4: remembered once per session for the Close flow
+
+// ---------------------------------------------------------------------------
+// v4: write requests go through apiFetch, which handles the OPTIONAL register
+// protection (env MM_API_KEY on the server). Off by default — with no key set
+// this behaves exactly like plain fetch. On the first 401 the user is asked
+// once for the access key; it's remembered in localStorage and retried.
+// ---------------------------------------------------------------------------
+const API_KEY_STORE = 'minuteman_api_key_v1';
+function storedApiKey(){ try{ return localStorage.getItem(API_KEY_STORE)||''; }catch(_){ return ''; } }
+async function apiFetch(url, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers);
+  const key = storedApiKey();
+  if(key) opts.headers['X-API-Key'] = key;
+  let res = await fetch(url, opts);
+  if(res.status === 401){
+    const entered = window.prompt('This register is protected — enter the access key:');
+    if(entered){
+      try{ localStorage.setItem(API_KEY_STORE, entered.trim()); }catch(_){}
+      opts.headers['X-API-Key'] = entered.trim();
+      res = await fetch(url, opts);
+    }
+  }
+  return res;
+}
 
 // --- Saved settings (per-device, localStorage) -----------------------------
 const SETTINGS_KEY = "minuteman_settings_v1";
@@ -584,7 +697,7 @@ async function fetchMinutesFromBackend(){
     template: state.template,   // v3: "safety" | "general"
     attendance
   };
-  const res = await fetch(apiBase()+'/api/minutes',{
+  const res = await apiFetch(apiBase()+'/api/minutes',{
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
   });
   if(!res.ok){
@@ -734,6 +847,67 @@ document.getElementById('siteName').addEventListener('input',e=>state.siteName=e
 document.getElementById('meetingDate').addEventListener('input',e=>state.date=e.target.value);
 document.getElementById('ledBy').addEventListener('input',e=>state.ledBy=e.target.value);
 
+// ---------- v4: carry-over — open actions from previous meetings at the site
+// On site-name entry (debounced), ask the register for open actions at that
+// site. The leader can close done ones on the spot; whatever is still open
+// when the meeting proceeds travels as state.carriedOver: read out at
+// Confirm, printed on the record as "Outstanding Actions (carried over)",
+// never duplicated as new action rows in the DB.
+const carryCard=document.getElementById('carryCard'), carryList=document.getElementById('carryList');
+let carryTimer=null;
+function askClosedBy(){
+  if(state.closedByName) return state.closedByName;
+  const suggested = settings.defaultLed || state.ledBy || '';
+  const name = window.prompt('Closed by (your name):', suggested);
+  if(name && name.trim()){ state.closedByName = name.trim(); }
+  return state.closedByName;
+}
+function carryRowHtml(a){
+  const due = a.overdue ? '<span class="ar-due overdue">OVERDUE</span>'
+    : (a.due_date ? '<span class="ar-due dated">due '+escapeHtml(a.due_date)+'</span>'
+                  : '<span class="ar-due nodate">no date</span>');
+  return '<div class="ar-row" data-id="'+a.id+'"><div style="flex:1">'
+    +'<div class="ar-what">'+escapeHtml(a.what)+'</div>'
+    +'<div class="ar-meta">'+escapeHtml(a.who||'Unassigned')+' · raised '+escapeHtml(a.meeting_date||'—')+' · by '+escapeHtml(a.by_when||'—')+' '+due+'</div>'
+    +'</div><button type="button" class="ar-btn close-btn">✓ Close</button></div>';
+}
+function renderCarryCard(){
+  const rows=state.carriedOver;
+  document.getElementById('carryCount').textContent=rows.length;
+  carryCard.classList.toggle('hidden', rows.length===0);
+  carryList.innerHTML=rows.map(carryRowHtml).join('');
+  carryList.querySelectorAll('.ar-row .close-btn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const row=btn.closest('.ar-row'); const id=Number(row.dataset.id);
+      const a=state.carriedOver.find(x=>x.id===id);
+      if(!window.confirm('Mark this action as closed?\n\n'+(a?a.what:''))) return;
+      const closedBy=askClosedBy();
+      btn.disabled=true; btn.textContent='Closing…';
+      try{
+        const res=await apiFetch(apiBase()+'/api/actions/'+id,{method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({status:'closed', closed_by:closedBy})});
+        if(!res.ok) throw new Error('server returned '+res.status);
+        state.carriedOver=state.carriedOver.filter(x=>x.id!==id);
+        renderCarryCard();
+      }catch(err){ btn.disabled=false; btn.textContent='✓ Close'; alert('Couldn’t close it ('+err.message+').'); }
+    });
+  });
+}
+async function checkCarryOver(){
+  if(!backendConfigured()){ state.carriedOver=[]; renderCarryCard(); return; }
+  const site=(state.siteName||'').trim();
+  if(!site){ state.carriedOver=[]; renderCarryCard(); return; }
+  try{
+    const res=await fetch(apiBase()+'/api/actions?status=open&site_name='+encodeURIComponent(site));
+    if(!res.ok) throw new Error(res.status);
+    state.carriedOver=(await res.json()).actions||[];
+  }catch(_){ state.carriedOver=[]; }
+  renderCarryCard();
+}
+function scheduleCarryCheck(){ clearTimeout(carryTimer); carryTimer=setTimeout(checkCarryOver, 500); }
+document.getElementById('siteName').addEventListener('input',scheduleCarryCheck);
+
 // ---------- v3: template picker ---------------------------------------------
 // The chosen template travels through the whole pipeline as
 // template: "safety" | "general" and drives which sections show on the
@@ -795,6 +969,7 @@ function loadDemo(n){ const d=DEMOS[n];
   else { state.meetingType=d.type; document.getElementById('meetingType').value=d.type; }
   if(!state.siteName){state.siteName=d.site;document.getElementById('siteName').value=d.site;}
   if(!state.ledBy){state.ledBy=d.led;document.getElementById('ledBy').value=d.led;}
+  scheduleCarryCheck();  // v4: demo may have just set the site
   d.speakers.forEach(name=>addAttendeeCard(name)); // ensure demo speakers exist even if trimmed from crew
   if(state.selected.size===0){ d.speakers.forEach(name=>{ const w=attGrid.querySelector(`.att[data-name="${CSS.escape(name)}"]`);
     if(w){toggle(name,w);w.querySelector('.sigwrap input').value='(signed on site)';state.signatures[name]='(signed on site)';}}); }
@@ -838,6 +1013,7 @@ genBtn.addEventListener('click',async()=>{
       state.extraction=normalizeMinutes(minutes);
       state.decisions=minutes.decisions||[];
       state.usingBackend=true;
+      state.providerUsed=minutes.provider_used||'';  // v4: the provider that actually ran
       genStatus.textContent='';
       genBtn.innerHTML='Review &amp; Confirm →'; genBtn.disabled=false;
       buildReadback(state.extraction); show(3);
@@ -918,6 +1094,11 @@ function buildReadback(ex){
     html+=rbSection('Decisions made',false,ex?ex.decisions:[],'No decisions recorded.',fmtDec);
     html+=rbSection('Minutes summary',false,(ex&&ex.summary)?[ex.summary]:[],'No summary was auto-extracted.',fmtSum);
   }
+  // v4: carried-over actions — final section, read out like the others.
+  if(state.carriedOver.length){
+    html+=rbSection('Carried-over actions — still outstanding',true,state.carriedOver,'',
+      a=>`<li><b>${a.who||'Unassigned'}</b> — ${a.what} <em>(raised ${a.meeting_date||'—'}, by ${a.by_when||'—'})</em></li>`);
+  }
   S.innerHTML=html;
 
   document.getElementById('rbAtt').textContent=`${state.selected.size} attendee${state.selected.size===1?'':'s'} present and signed in.`;
@@ -930,7 +1111,7 @@ function buildReadback(ex){
 function cell(txt,edit){ return `<td${edit?' contenteditable':''}>${txt||''}</td>`; }
 function incRow(i){ return `<tr>${cell(i.description,1)}${cell(i.severity,1)}${cell(i.outcome,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
 function hazRow(h){ return `<tr>${cell(h.hazard,1)}${cell(h.control,1)}<td contenteditable><span class="tier">${h.tier||''}</span></td>${cell(h.note,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
-function actRow(a){ return `<tr>${cell(a.who,1)}${cell(a.what,1)}${cell(a.when,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
+function actRow(a){ return `<tr${a.carriedFrom?` data-cf="${a.carriedFrom}"`:''}>${cell(a.who,1)}${cell(a.what,1)}${cell(a.when,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
 function decRow(d){ return `<tr>${cell(d,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
 function addInc(){ document.querySelector('#incTable tbody').insertAdjacentHTML('beforeend',incRow({description:'',severity:'',outcome:''})); }
 function addHaz(){ document.querySelector('#hazTable tbody').insertAdjacentHTML('beforeend',hazRow({hazard:'',control:'',tier:'',note:''})); }
@@ -950,8 +1131,8 @@ function buildRecord(ex){
   document.getElementById('attHeading').textContent = isGen ? 'Attendees & Sign-off' : 'Attendance & Sign-off';
   const sheet=document.getElementById('sheet'); const disc=sheet.querySelector('.disc');
   const order = isGen
-    ? ['attSect','sumSect','actSect','decSect','notesSect','incSect','hazSect']
-    : ['incSect','hazSect','actSect','decSect','sumSect','notesSect','attSect'];
+    ? ['attSect','sumSect','actSect','carrySect','decSect','notesSect','incSect','hazSect']
+    : ['incSect','hazSect','actSect','carrySect','decSect','sumSect','notesSect','attSect'];
   order.forEach(id=>sheet.insertBefore(document.getElementById(id), disc));
 
   document.getElementById('shType').textContent=state.meetingType;
@@ -975,6 +1156,26 @@ function buildRecord(ex){
     addAct();
     document.getElementById('shSummary').textContent='';
   }
+
+  // v4: Outstanding Actions (carried over) — shown on the record; a row can
+  // be explicitly re-committed into THIS meeting (becomes a fresh action row
+  // linked back via carried_from_meeting_id); otherwise it is never
+  // duplicated in the DB — the register already tracks it.
+  const cb=document.querySelector('#carryTable tbody'); cb.innerHTML='';
+  document.getElementById('carrySect').classList.toggle('hidden', state.carriedOver.length===0);
+  state.carriedOver.forEach(a=>{
+    const tr=document.createElement('tr'); tr.dataset.carryId=a.id;
+    tr.innerHTML=`<td>${escapeHtml(a.who||'Unassigned')}</td><td>${escapeHtml(a.what)}</td><td>${escapeHtml(a.meeting_date||'—')}</td>`
+      +`<td><button type="button" class="addrow" style="margin:0">↻ re-commit into this meeting</button></td>`;
+    tr.querySelector('button').addEventListener('click',()=>{
+      document.querySelector('#actTable tbody').insertAdjacentHTML('beforeend',
+        actRow({who:a.who, what:a.what, when:a.by_when, carriedFrom:a.meeting_id}));
+      state.carriedOver=state.carriedOver.filter(x=>x.id!==a.id);
+      tr.remove();
+      document.getElementById('carrySect').classList.toggle('hidden', state.carriedOver.length===0);
+    });
+    cb.appendChild(tr);
+  });
 
   // discussion notes: keep the raw transcript so live capture is never lost
   document.getElementById('shNotes').textContent = ta.value.trim();
@@ -1020,11 +1221,14 @@ function hasLastMeeting(){ return !!loadLastMeeting(); }
 // the localStorage "Previous Meeting" playback stays as the offline fallback.
 function refreshHomePrev(){
   const prev=document.getElementById('homePrev'), reg=document.getElementById('homeRegister');
+  const acts=document.getElementById('homeActions');  // v4
   if(backendConfigured()){
     if(reg) reg.style.display='';
+    if(acts) acts.style.display='';
     if(prev) prev.style.display='none';
   } else {
     if(reg) reg.style.display='none';
+    if(acts) acts.style.display='none';  // register features are online-only
     if(prev) prev.style.display = hasLastMeeting() ? '' : 'none';
   }
 }
@@ -1133,7 +1337,9 @@ function buildExportPayload(){
     hazards.push({hazard:c[0].textContent.trim(), control:c[1].textContent.trim(), control_tier:c[2].textContent.trim(), compliance_note:c[3].textContent.trim()});});
   const actions=[];
   document.querySelectorAll('#actTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');
-    actions.push({who:c[0].textContent.trim(), what:c[1].textContent.trim(), by_when:c[2].textContent.trim()});});
+    const row={who:c[0].textContent.trim(), what:c[1].textContent.trim(), by_when:c[2].textContent.trim()};
+    if(tr.dataset.cf) row.carried_from_meeting_id=Number(tr.dataset.cf);  // v4 re-commit provenance
+    actions.push(row);});
   const decisions=[];
   document.querySelectorAll('#decTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');
     const d=c[0].textContent.trim(); if(d) decisions.push(d);});
@@ -1147,6 +1353,9 @@ function buildExportPayload(){
     topics: (state.extraction && state.extraction.topics) || [],
     incidents: isGen?[]:incidents,
     hazards: isGen?[]:hazards,
+    // v4: still-outstanding carried-over actions, for the exported record
+    carried_over: state.carriedOver.map(a=>({who:a.who||'', what:a.what,
+      original_date:a.meeting_date||'', by_when:a.by_when||''})),
     actions, decisions, attendance
   };
 }
@@ -1225,9 +1434,11 @@ geoBtn.addEventListener('click',()=>{
       const place=parts.length?parts.join(', '):(d.display_name||coords);
       document.getElementById('siteName').value=place; state.siteName=place;
       geoStatus.textContent='Location set — edit if needed.';
+      scheduleCarryCheck();  // v4: the site changed — look for open actions
     }catch(_){
       document.getElementById('siteName').value=coords; state.siteName=coords;
       geoStatus.textContent='Address lookup unavailable — used GPS coordinates.';
+      scheduleCarryCheck();
     }
     geoBtn.disabled=false;
   }, err=>{
@@ -1310,17 +1521,19 @@ saveRegBtn.addEventListener('click',async()=>{
     template:p.template, meeting_type:p.meeting_type, site_name:p.site_name,
     meeting_date:p.meeting_date, led_by:p.led_by, summary:p.summary,
     transcript:ta.value.trim(),
-    provider_used: state.usingBackend?'backend (server default)':'offline-demo',
+    // v4: the real provider echoed by /api/minutes, with the v3 fallbacks
+    provider_used: state.providerUsed || (state.usingBackend?'backend (server default)':'offline-demo'),
     confirmed_by_leader:true,   // the Confirm screen gate was passed to get here
     app_version:APP_VERSION,
     extra: p.template==='general' ? {topics:p.topics||[]} : {},
     attendance:p.attendance, incidents:p.incidents, hazards:p.hazards,
-    actions:p.actions.filter(a=>a.what), decisions:p.decisions
+    actions:p.actions.filter(a=>a.what), decisions:p.decisions,
+    carried_over: state.carriedOver.map(a=>a.id)  // v4: recorded in extra server-side
   };
   const label=saveRegBtn.innerHTML; saveRegBtn.disabled=true; saveRegBtn.innerHTML='Saving…';
   saveRegStatus.textContent=''; saveRegStatus.className='savefeed';
   try{
-    const res=await fetch(apiBase()+'/api/meetings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const res=await apiFetch(apiBase()+'/api/meetings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     if(!res.ok){ let detail=''; try{ const j=await res.json(); detail=j.detail?JSON.stringify(j.detail).slice(0,120):''; }catch(_){}
       throw new Error(res.status+(detail?' — '+detail:'')); }
     const saved=await res.json();
@@ -1340,27 +1553,87 @@ const meetingViewModal=document.getElementById('meetingViewModal');
 let mvMeeting=null;
 function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 function plural(n,w){ return n+' '+w+(n===1?'':'s'); }
+// v4: the register keeps filter state — search, date range, archived toggle,
+// and "Load more" pagination past the first 50.
+const REG_PAGE = 50;
+const regState = { offset:0, done:false };
+function regQueryString(){
+  const p=new URLSearchParams();
+  p.set('limit', String(REG_PAGE));
+  p.set('offset', String(regState.offset));
+  const q=document.getElementById('regSearch').value.trim(); if(q) p.set('q', q);
+  const f=document.getElementById('regFrom').value.trim(); if(f) p.set('from', f);
+  const t=document.getElementById('regTo').value.trim(); if(t) p.set('to', t);
+  if(document.getElementById('regArchived').checked) p.set('include_archived','true');
+  return p.toString();
+}
+function regRowEl(r){
+  const counts = r.template==='general'
+    ? plural(r.action_count,'action')+' · '+plural(r.decision_count,'decision')
+    : plural(r.incident_count,'incident')+' · '+plural(r.hazard_count,'hazard')+' · '+plural(r.action_count,'action');
+  const wrap=document.createElement('div'); wrap.className='reg-row'; wrap.style.cursor='default';
+  wrap.innerHTML='<span style="cursor:pointer;flex:1"><span class="rr-main">'+escapeHtml(r.meeting_type||'Meeting')+' — '+escapeHtml(r.site_name||'—')+(r.archived?' <em style="color:#c02626">(archived)</em>':'')+'</span><br/>'
+    +'<span class="rr-sub">'+escapeHtml(r.meeting_date||'')+' · '+counts+'</span></span>'
+    +'<span class="reg-badge '+(r.template==='general'?'general':'safety')+'">'+(r.template==='general'?'General':'Safety')+'</span>';
+  // whole row opens the meeting (as v3 did) — except clicks on the buttons
+  wrap.addEventListener('click',e=>{ if(e.target.closest('button')) return; openMeetingView(r.id); });
+  // v4: archive is the default "remove" — hard delete only from the archived view.
+  const btn=document.createElement('button'); btn.type='button'; btn.className='ar-btn';
+  if(!r.archived){
+    btn.textContent='Archive';
+    btn.addEventListener('click',async()=>{
+      if(!window.confirm('Archive this meeting? It stays in the database and can be shown again with “Show archived”.')) return;
+      try{ const res=await apiFetch(apiBase()+'/api/meetings/'+r.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({archived:true})});
+        if(!res.ok) throw new Error(res.status);
+        reloadRegister();
+      }catch(err){ alert('Couldn’t archive ('+err.message+').'); }
+    });
+    wrap.appendChild(btn);
+  } else {
+    btn.textContent='Unarchive';
+    btn.addEventListener('click',async()=>{
+      try{ const res=await apiFetch(apiBase()+'/api/meetings/'+r.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({archived:false})});
+        if(!res.ok) throw new Error(res.status);
+        reloadRegister();
+      }catch(err){ alert('Couldn’t unarchive ('+err.message+').'); }
+    });
+    const del=document.createElement('button'); del.type='button'; del.className='ar-btn'; del.style.borderColor='#c02626'; del.style.color='#c02626';
+    del.textContent='Delete';
+    del.addEventListener('click',async()=>{
+      if(!window.confirm('PERMANENTLY delete this meeting and everything in it? This cannot be undone.')) return;
+      try{ const res=await apiFetch(apiBase()+'/api/meetings/'+r.id,{method:'DELETE'});
+        if(!res.ok) throw new Error(res.status);
+        reloadRegister();
+      }catch(err){ alert('Couldn’t delete ('+err.message+').'); }
+    });
+    wrap.appendChild(btn); wrap.appendChild(del);
+  }
+  return wrap;
+}
+async function loadRegisterPage(append){
+  try{
+    const res=await fetch(apiBase()+'/api/meetings?'+regQueryString());
+    if(!res.ok) throw new Error('server returned '+res.status);
+    const rows=(await res.json()).meetings||[];
+    if(!append) regList.innerHTML='';
+    rows.forEach(r=>regList.appendChild(regRowEl(r)));
+    regState.done = rows.length < REG_PAGE;
+    document.getElementById('regMore').style.display = regState.done ? 'none' : '';
+    const total=regList.children.length;
+    regStatus.textContent = total
+      ? total+' meeting'+(total===1?'':'s')+' shown — tap one to view, play back, or re-export.'
+      : 'No meetings match — finish a meeting and tap “Save to Register”, or clear the filters.';
+    // collect site names for the datalists (site history + action register)
+    const seen=new Set(); const dl1=document.getElementById('histSiteList'), dl2=document.getElementById('arSiteList');
+    rows.forEach(r=>{ if(r.site_name && !seen.has(r.site_name)){ seen.add(r.site_name);
+      [dl1,dl2].forEach(dl=>{ if(dl && ![...dl.options].some(o=>o.value===r.site_name)){ const o=document.createElement('option'); o.value=r.site_name; dl.appendChild(o); } }); } });
+  }catch(err){ regStatus.textContent='Couldn’t load the register ('+err.message+').'; }
+}
+function reloadRegister(){ regState.offset=0; loadRegisterPage(false); }
 async function openRegister(){
   registerModal.classList.remove('hidden');
-  regList.innerHTML=''; regStatus.textContent='Loading saved meetings…';
-  try{
-    const res=await fetch(apiBase()+'/api/meetings?limit=50');
-    if(!res.ok) throw new Error('server returned '+res.status);
-    const data=await res.json(); const rows=data.meetings||[];
-    if(!rows.length){ regStatus.textContent='No meetings saved yet — finish a meeting and tap “Save to Register”.'; return; }
-    regStatus.textContent=plural(rows.length,'saved meeting')+' — newest first. Tap one to view, play back, or re-export.';
-    rows.forEach(r=>{
-      const counts = r.template==='general'
-        ? plural(r.action_count,'action')+' · '+plural(r.decision_count,'decision')
-        : plural(r.incident_count,'incident')+' · '+plural(r.hazard_count,'hazard')+' · '+plural(r.action_count,'action');
-      const b=document.createElement('button'); b.type='button'; b.className='reg-row';
-      b.innerHTML='<span><span class="rr-main">'+escapeHtml(r.meeting_type||'Meeting')+' — '+escapeHtml(r.site_name||'—')+'</span><br/>'
-        +'<span class="rr-sub">'+escapeHtml(r.meeting_date||'')+' · '+counts+'</span></span>'
-        +'<span class="reg-badge '+(r.template==='general'?'general':'safety')+'">'+(r.template==='general'?'General':'Safety')+'</span>';
-      b.addEventListener('click',()=>openMeetingView(r.id));
-      regList.appendChild(b);
-    });
-  }catch(err){ regStatus.textContent='Couldn’t load the register ('+err.message+').'; }
+  regStatus.textContent='Loading saved meetings…';
+  reloadRegister();
 }
 // Map a stored server meeting to the playback record shape (same fields the
 // localStorage snapshot uses — attendance deliberately never included).
@@ -1431,6 +1704,175 @@ async function exportStored(kind){
 }
 document.getElementById('regClose').addEventListener('click',()=>registerModal.classList.add('hidden'));
 registerModal.addEventListener('click',e=>{ if(e.target===registerModal) registerModal.classList.add('hidden'); });
+// v4: register controls
+let regSearchTimer=null;
+['regSearch','regFrom','regTo'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+  clearTimeout(regSearchTimer); regSearchTimer=setTimeout(reloadRegister,400); }));
+document.getElementById('regArchived').addEventListener('change',reloadRegister);
+document.getElementById('regMore').addEventListener('click',()=>{ regState.offset+=REG_PAGE; loadRegisterPage(true); });
+// v4: tabs — Meetings | Site history
+document.getElementById('regTabMeetings').addEventListener('click',()=>{
+  document.getElementById('regTabMeetings').classList.add('on');
+  document.getElementById('regTabHistory').classList.remove('on');
+  document.getElementById('regMeetingsPane').classList.remove('hidden');
+  document.getElementById('regHistoryPane').classList.add('hidden');
+});
+document.getElementById('regTabHistory').addEventListener('click',()=>{
+  document.getElementById('regTabHistory').classList.add('on');
+  document.getElementById('regTabMeetings').classList.remove('on');
+  document.getElementById('regHistoryPane').classList.remove('hidden');
+  document.getElementById('regMeetingsPane').classList.add('hidden');
+});
+
+// ---------- v4: Site history (read-only — meetings, recurring hazards, incidents)
+async function showSiteHistory(){
+  const site=document.getElementById('histSite').value.trim();
+  const statusEl=document.getElementById('histStatus'), body=document.getElementById('histBody');
+  if(!site){ statusEl.textContent='Type a site name first.'; return; }
+  statusEl.textContent='Loading history for '+site+'…'; body.innerHTML='';
+  try{
+    const [mRes,hRes,iRes]=await Promise.all([
+      fetch(apiBase()+'/api/meetings?site_name='+encodeURIComponent(site)+'&limit=500'),
+      fetch(apiBase()+'/api/hazards?site_name='+encodeURIComponent(site)),
+      fetch(apiBase()+'/api/incidents?site_name='+encodeURIComponent(site)),
+    ]);
+    if(!mRes.ok||!hRes.ok||!iRes.ok) throw new Error('server error');
+    const meetings=(await mRes.json()).meetings||[];
+    const hazards=(await hRes.json()).hazards||[];
+    const incidents=(await iRes.json()).incidents||[];
+    // group hazards by normalised text (lowercase, collapsed whitespace);
+    // repeat offenders first
+    const groups=new Map();
+    hazards.forEach(h=>{
+      const key=String(h.hazard||'').toLowerCase().replace(/\s+/g,' ').trim();
+      if(!groups.has(key)) groups.set(key,{label:h.hazard, count:0, dates:[]});
+      const g=groups.get(key); g.count++; if(h.meeting_date) g.dates.push(h.meeting_date);
+    });
+    const grouped=[...groups.values()].sort((a,b)=>b.count-a.count);
+    let html='<p><b>'+plural(meetings.length,'meeting')+'</b> at this site'
+      +(meetings.length?': '+meetings.map(m=>escapeHtml(m.meeting_date||'—')).join(', '):'')+'</p>';
+    html+='<p style="margin:10px 0 2px"><b>Recurring hazards</b> ('+grouped.length+')</p>';
+    html+= grouped.length
+      ? '<ul style="padding-left:20px;margin:4px 0">'+grouped.map(g=>'<li>'+escapeHtml(g.label)
+          +' — <b>×'+g.count+'</b>'+(g.dates.length?' <em>('+g.dates.map(escapeHtml).join(', ')+')</em>':'')+'</li>').join('')+'</ul>'
+      : '<p style="color:#64748b">No hazards recorded at this site.</p>';
+    html+='<p style="margin:10px 0 2px"><b>Incidents</b> ('+incidents.length+')</p>';
+    html+= incidents.length
+      ? '<ul style="padding-left:20px;margin:4px 0">'+incidents.map(i=>'<li>'+escapeHtml(i.description)
+          +' <em>('+escapeHtml(i.severity||'not stated')+', '+escapeHtml(i.meeting_date||'—')+')</em></li>').join('')+'</ul>'
+      : '<p style="color:#64748b">No incidents recorded at this site.</p>';
+    body.innerHTML=html;
+    statusEl.textContent='History for '+site+':';
+  }catch(err){ statusEl.textContent='Couldn’t load the history ('+err.message+').'; }
+}
+document.getElementById('histGo').addEventListener('click',showSiteHistory);
+
+// ---------- v4: Action Register (cross-meeting — the headline feature) ------
+const actionRegModal=document.getElementById('actionRegModal');
+let arRows=[];
+function arQueryString(){
+  const p=new URLSearchParams();
+  p.set('status', document.getElementById('arStatus').value);
+  const s=document.getElementById('arSite').value.trim(); if(s) p.set('site_name', s);
+  const w=document.getElementById('arWho').value.trim(); if(w) p.set('who', w);
+  p.set('limit','500');
+  return p.toString();
+}
+function arFilters(){
+  return { status:document.getElementById('arStatus').value,
+           site_name:document.getElementById('arSite').value.trim()||null,
+           who:document.getElementById('arWho').value.trim()||null };
+}
+function arRowEl(a){
+  const due = a.overdue ? '<span class="ar-due overdue">OVERDUE</span>'
+    : (a.due_date ? '<span class="ar-due dated">due '+escapeHtml(a.due_date)+'</span>'
+                  : '<span class="ar-due nodate">no date</span>');
+  const div=document.createElement('div'); div.className='ar-row';
+  div.innerHTML='<div style="flex:1"><div class="ar-what">'+escapeHtml(a.what)+'</div>'
+    +'<div class="ar-meta">'+escapeHtml(a.site_name||'—')+' · '+escapeHtml(a.meeting_type||'')+' '+escapeHtml(a.meeting_date||'')
+    +' · by '+escapeHtml(a.by_when||'—')+' '+due
+    +(a.status==='closed'?' · <b>closed</b> by '+escapeHtml(a.closed_by||'—'):'')+'</div></div>';
+  const btn=document.createElement('button'); btn.type='button'; btn.className='ar-btn';
+  if(a.status==='open'){
+    btn.classList.add('close-btn'); btn.textContent='✓ Close';
+    btn.addEventListener('click',async()=>{
+      if(!window.confirm('Mark this action as closed?\n\n'+a.what)) return;
+      const closedBy=askClosedBy();
+      btn.disabled=true;
+      try{
+        const res=await apiFetch(apiBase()+'/api/actions/'+a.id,{method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({status:'closed', closed_by:closedBy})});
+        if(!res.ok) throw new Error(res.status);
+        loadActionRegister();
+      }catch(err){ btn.disabled=false; alert('Couldn’t close it ('+err.message+').'); }
+    });
+  } else {
+    btn.textContent='↺ Reopen';
+    btn.addEventListener('click',async()=>{
+      try{
+        const res=await apiFetch(apiBase()+'/api/actions/'+a.id,{method:'PATCH',
+          headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:'open'})});
+        if(!res.ok) throw new Error(res.status);
+        loadActionRegister();
+      }catch(err){ alert('Couldn’t reopen it ('+err.message+').'); }
+    });
+  }
+  div.appendChild(btn);
+  return div;
+}
+function renderActionRegister(){
+  const list=document.getElementById('arList'); list.innerHTML='';
+  const search=document.getElementById('arSearch').value.trim().toLowerCase();
+  const rows=search ? arRows.filter(a=>String(a.what).toLowerCase().includes(search)) : arRows;
+  const line=document.getElementById('arStatusLine');
+  if(!rows.length){ line.textContent='No actions match.'; return; }
+  const overdueCount=rows.filter(a=>a.overdue).length;
+  line.textContent=plural(rows.length,'action')+(overdueCount?' — '+overdueCount+' OVERDUE':'');
+  // grouped by person; unassigned first, labelled as the engine writes it
+  const groups=new Map();
+  rows.forEach(a=>{
+    const key=(a.who&&a.who.trim())?a.who.trim():'Unassigned — needs an owner';
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(a);
+  });
+  const names=[...groups.keys()].sort((x,y)=>{
+    const ux=x==='Unassigned — needs an owner', uy=y==='Unassigned — needs an owner';
+    if(ux!==uy) return ux?-1:1;
+    return x.localeCompare(y);
+  });
+  names.forEach(name=>{
+    const h=document.createElement('div'); h.className='ar-group'; h.textContent=name;
+    list.appendChild(h);
+    groups.get(name).forEach(a=>list.appendChild(arRowEl(a)));
+  });
+}
+async function loadActionRegister(){
+  document.getElementById('arStatusLine').textContent='Loading…';
+  try{
+    const res=await fetch(apiBase()+'/api/actions?'+arQueryString());
+    if(!res.ok) throw new Error('server returned '+res.status);
+    arRows=(await res.json()).actions||[];
+    renderActionRegister();
+  }catch(err){ document.getElementById('arStatusLine').textContent='Couldn’t load the register ('+err.message+').'; }
+}
+function openActionRegister(){ actionRegModal.classList.remove('hidden'); loadActionRegister(); }
+document.getElementById('arClose').addEventListener('click',()=>actionRegModal.classList.add('hidden'));
+actionRegModal.addEventListener('click',e=>{ if(e.target===actionRegModal) actionRegModal.classList.add('hidden'); });
+['arStatus','arSite','arWho'].forEach(id=>document.getElementById(id).addEventListener('change',loadActionRegister));
+let arSearchTimer=null;
+document.getElementById('arSearch').addEventListener('input',()=>{ clearTimeout(arSearchTimer); arSearchTimer=setTimeout(renderActionRegister,250); });
+document.getElementById('arExport').addEventListener('click',async()=>{
+  const btn=document.getElementById('arExport'); const label=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='Building Excel…';
+  try{
+    const res=await fetch(apiBase()+'/export/actions.xlsx',{method:'POST',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify(arFilters())});
+    if(!res.ok) throw new Error('server returned '+res.status);
+    downloadBlob(await res.blob(), 'minute-man-action-register.xlsx');
+  }catch(err){ alert('Export failed ('+err.message+').'); }
+  btn.disabled=false; btn.innerHTML=label;
+});
 document.getElementById('mvClose').addEventListener('click',()=>meetingViewModal.classList.add('hidden'));
 meetingViewModal.addEventListener('click',e=>{ if(e.target===meetingViewModal) meetingViewModal.classList.add('hidden'); });
 document.getElementById('mvPlay').addEventListener('click',()=>{ if(mvMeeting) openPlaybackFor(storedToRec(mvMeeting)); });
@@ -1445,6 +1887,7 @@ document.getElementById('homeSettings').addEventListener('click',openSettings);
 document.getElementById('homeLogo').addEventListener('click',goHome);
 document.getElementById('homePrev').addEventListener('click',openPlayback);
 document.getElementById('homeRegister').addEventListener('click',openRegister);
+document.getElementById('homeActions').addEventListener('click',openActionRegister);
 document.getElementById('pbStop').addEventListener('click',stopPlayback);
 document.getElementById('pbNew').addEventListener('click',()=>{ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); enterApp(1); });
 document.getElementById('playbackModal').addEventListener('click',e=>{ if(e.target===e.currentTarget){ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); } });

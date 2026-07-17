@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
-SCHEMA_VERSION = 1  # bump on every future schema change (see module docstring)
+SCHEMA_VERSION = 2  # v4 "Registers" — sites/people, soft delete, action register columns
 
 # sqlite:///./minuteman.db  →  a file called minuteman.db next to main.py.
 DEFAULT_DB_URL = "sqlite:///./minuteman.db"
@@ -62,21 +62,74 @@ if DATABASE_URL.startswith("sqlite"):
 SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
-def init_db() -> None:
-    """Create all tables (if missing) and stamp schema_meta with version 1.
+def _alembic_config():
+    """Programmatic Alembic config — no alembic.ini needed. Chris never runs
+    commands: every deploy self-migrates on startup (v4 decision, see 02)."""
+    from alembic.config import Config
 
-    Safe to call on every startup: create_all() is a no-op for tables that
-    already exist, and the schema_meta row is only inserted once.
+    cfg = Config()
+    cfg.set_main_option("script_location",
+                        os.path.join(os.path.dirname(os.path.abspath(__file__)), "alembic"))
+    cfg.set_main_option("sqlalchemy.url", DATABASE_URL)
+    return cfg
+
+
+def init_db() -> None:
+    """Bring the database to the current schema (v2). Safe on every startup.
+
+    Two paths:
+      * BRAND-NEW database (no tables): create the current models directly
+        with create_all(), stamp Alembic at head, write schema_meta = 2 —
+        fresh installs never replay migration history.
+      * EXISTING database: run `alembic upgrade head` programmatically. A v3
+        database (schema v1, no alembic_version table) is treated as revision
+        base, so the 0001 migration applies the additive v1→v2 delta —
+        including backfills — without touching existing rows. An already-
+        migrated database is a no-op. This is how a Render deploy upgrades
+        live data with Chris doing nothing.
     """
+    from sqlalchemy import inspect
+
     from models import Base, SchemaMeta  # imported here to avoid circular import
 
-    Base.metadata.create_all(engine)
-    with SessionLocal() as session:
-        existing = session.execute(select(SchemaMeta)).scalars().first()
-        if existing is None:
-            session.add(SchemaMeta(schema_version=SCHEMA_VERSION,
-                                   applied_at=datetime.now(timezone.utc)))
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+
+    if "meetings" not in tables:
+        # Fresh install — current-schema create + stamp at head.
+        from alembic import command
+
+        Base.metadata.create_all(engine)
+        command.stamp(_alembic_config(), "head")
+        with SessionLocal() as session:
+            existing = session.execute(select(SchemaMeta)).scalars().first()
+            if existing is None:
+                session.add(SchemaMeta(schema_version=SCHEMA_VERSION,
+                                       applied_at=datetime.now(timezone.utc)))
+            else:
+                existing.schema_version = SCHEMA_VERSION
             session.commit()
+        return
+
+    # Existing database — migrate in place (no-op when already at head).
+    from alembic import command
+
+    command.upgrade(_alembic_config(), "head")
+    # Belt-and-braces: create_all() also adds any table that somehow doesn't
+    # exist yet (no-op otherwise) — it never alters existing tables.
+    Base.metadata.create_all(engine)
+
+
+def get_schema_version() -> int | None:
+    """Read schema_meta.schema_version (None when unreadable)."""
+    from models import SchemaMeta
+
+    try:
+        with SessionLocal() as session:
+            row = session.execute(select(SchemaMeta)).scalars().first()
+            return row.schema_version if row else None
+    except Exception:
+        return None
 
 
 def get_session():

@@ -69,6 +69,16 @@ class ActionRow(BaseModel):
     by_when: str
 
 
+class CarriedOverRow(BaseModel):
+    """v4 — an open action from a previous meeting at this site, shown on the
+    record as still outstanding (NOT a new action of this meeting)."""
+
+    who: str = ""
+    what: str
+    original_date: str = ""   # the meeting_date it was raised
+    by_when: str = ""
+
+
 class AttendanceEntry(BaseModel):
     name: str
     signature: str = ""
@@ -85,6 +95,7 @@ class MinutesExportRequest(BaseModel):
     topics: List[str] = []            # v3: general template topic labels
     hazards: List[HazardRow] = []
     actions: List[ActionRow] = []
+    carried_over: List[CarriedOverRow] = []  # v4: outstanding from previous meetings
     decisions: List[str] = []
     attendance: List[AttendanceEntry] = []
 
@@ -158,6 +169,13 @@ def _build_pdf(payload: MinutesExportRequest) -> bytes:
             elements.append(styled_table(rows, [38 * mm, 90 * mm, 30 * mm], accent_fill))
         else:
             elements.append(Paragraph("No actions recorded.", body_style))
+        # v4: carried-over actions follow the register, deliberately UNnumbered
+        # so the v3 numbered-section layout (and its tests) stay intact.
+        if payload.carried_over:
+            elements.append(Paragraph("Outstanding Actions (carried over)", heading_style))
+            rows = [["Who", "What", "Raised At", "By When"]]
+            rows += [[c.who, c.what, c.original_date, c.by_when] for c in payload.carried_over]
+            elements.append(styled_table(rows, [34 * mm, 72 * mm, 28 * mm, 24 * mm], accent_fill))
 
     def decisions_section(number: int):
         elements.append(Paragraph(f"{number}. Decisions Made", heading_style))
@@ -297,6 +315,16 @@ def _build_excel(payload: MinutesExportRequest) -> bytes:
     wrap_body(ws2)
     _autosize(ws2, [24, 60, 18])
 
+    # v4: Outstanding (carried over) sheet — only when there is content
+    if payload.carried_over:
+        wsc = wb.create_sheet("Outstanding (carried over)")
+        wsc.append(["Who", "What", "Raised At", "By When"])
+        style_header(wsc, fill_orange)
+        for c2 in payload.carried_over:
+            wsc.append([c2.who, c2.what, c2.original_date, c2.by_when])
+        wrap_body(wsc)
+        _autosize(wsc, [24, 50, 18, 18])
+
     # Sheet: Decisions (both templates)
     ws3 = wb.create_sheet("Decisions")
     ws3.append(["Decision"])
@@ -351,6 +379,73 @@ def export_excel(payload: MinutesExportRequest):
     filename = f"minute-man-{payload.meeting_type.lower().replace(' ', '-')}-{payload.meeting_date}.xlsx"
     return StreamingResponse(
         io.BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+# ---------------------------------------------------------------------------
+# v4 — Action Register export: the current filtered list as one styled sheet.
+# Same filters as GET /api/actions, passed in the POST body.
+# ---------------------------------------------------------------------------
+class ActionsExportRequest(BaseModel):
+    status: str = "open"                 # "open" | "closed" | "all"
+    who: Optional[str] = None
+    site_name: Optional[str] = None
+    template: Optional[str] = None
+    date_from: Optional[str] = None
+    date_to: Optional[str] = None
+    overdue: bool = False
+    limit: int = 500
+    offset: int = 0
+
+
+@router.post("/actions.xlsx")
+def export_actions(req: ActionsExportRequest):
+    import crud
+    from db import SessionLocal
+
+    with SessionLocal() as session:
+        rows, _total = crud.list_actions(
+            session, status=req.status if req.status in ("open", "closed", "all") else "open",
+            who=req.who, site_name=req.site_name, template=req.template,
+            date_from=req.date_from, date_to=req.date_to, overdue=req.overdue,
+            limit=min(req.limit, 500), offset=req.offset)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Action Register"
+    header_font = Font(bold=True, color="FFFFFF")
+    fill_orange = PatternFill(start_color=SAFETY_ORANGE, end_color=SAFETY_ORANGE, fill_type="solid")
+    wrap = Alignment(wrap_text=True, vertical="top")
+    red_font = Font(color="C02626", bold=True)
+
+    ws.append(["Status", "Overdue", "Who", "What", "By When", "Due Date",
+               "Site", "Meeting", "Meeting Date", "Closed By", "Closed At"])
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = fill_orange
+    for r in rows:
+        ws.append([r["status"], "YES" if r["overdue"] else "", r["who"], r["what"],
+                   r["by_when"], r["due_date"] or "", r["site_name"],
+                   r["meeting_type"], r["meeting_date"], r["closed_by"] or "",
+                   (r["closed_at"] or "")[:19].replace("T", " ")])
+        if r["overdue"]:
+            ws.cell(row=ws.max_row, column=2).font = red_font
+    for row in ws.iter_rows(min_row=2):
+        for cell in row:
+            cell.alignment = wrap
+    _autosize(ws, [9, 9, 18, 46, 14, 12, 22, 18, 14, 14, 18])
+    ws.append([])
+    ws.append([DISCLAIMER])
+    ws.cell(row=ws.max_row, column=1).alignment = wrap
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    filename = f"minute-man-action-register-{date.today().isoformat()}.xlsx"
+    return StreamingResponse(
+        buffer,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

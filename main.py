@@ -1,30 +1,42 @@
 """
-Minute Man — FastAPI backend. v3.0: two templates + a real meetings database.
+Minute Man — FastAPI backend. v4.0 "Registers": cross-meeting intelligence.
 
 Endpoints:
-  GET    /api/health         -> liveness check (+ database status, v3)
-  POST   /api/minutes        -> transcript in, structured minutes out (the engine)
-                                v3: accepts template = "safety" (default) | "general"
-  POST   /api/meetings       -> save a full confirmed meeting to the database (v3)
-  GET    /api/meetings       -> list saved meetings, newest first (v3)
-  GET    /api/meetings/{id}  -> one full meeting with all children (v3)
-  DELETE /api/meetings/{id}  -> hard delete a meeting (v3)
-  POST   /export/pdf         -> minutes JSON in, PDF download out   (from export_routes)
-  POST   /export/excel       -> minutes JSON in, .xlsx download out (from export_routes)
+  GET    /api/health           -> liveness (+ database, schema_version, counts)
+  POST   /api/minutes          -> transcript in, structured minutes out
+                                  (template = "safety" (default) | "general";
+                                   v4: echoes provider_used)
+  POST   /api/meetings         -> save a full confirmed meeting (v4: accepts
+                                  carried_over ids; matches sites/people)
+  GET    /api/meetings         -> list, newest first (v4: q search, offset,
+                                  include_archived)
+  GET    /api/meetings/{id}    -> one full meeting with all children
+  PATCH  /api/meetings/{id}    -> v4: archive / unarchive (soft delete)
+  DELETE /api/meetings/{id}    -> hard delete (kept; UI default is archive)
+  GET    /api/actions          -> v4: cross-meeting action register w/ filters
+  PATCH  /api/actions/{id}     -> v4: close / reopen an action
+  GET    /api/hazards          -> v4: hazard history w/ meeting context
+  GET    /api/incidents        -> v4: incident history w/ meeting context
+  POST   /export/pdf|excel     -> exports (from export_routes)
+  POST   /export/actions.xlsx  -> v4: filtered action-register export
+
+Optional write protection: set env MM_API_KEY and every POST/PATCH/DELETE
+under /api/ requires header X-API-Key (GETs and /api/health stay open).
+Unset (the default), behaviour is identical to v3.
 
 Run locally:
   uvicorn main:app --reload --port 8080
 
-Database:
-  DATABASE_URL env var; defaults to a local SQLite file (./minuteman.db).
-  See db.py for the SQLite-vs-Postgres story.
+Database: DATABASE_URL env (SQLite default). On startup db.init_db()
+self-migrates a v3 database to schema v2 in place — additive only, existing
+rows untouched. See db.py / alembic/versions/0001….py.
 """
 
 import os
 import logging
 from typing import List, Literal, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -41,12 +53,25 @@ except Exception:  # pragma: no cover
 from llm import extract_minutes
 from export_routes import router as export_router, MinutesExportRequest, AttendanceEntry
 import crud
-from db import get_session, init_db, SessionLocal
+from db import get_schema_version, get_session, init_db, SessionLocal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("minute-man")
 
-APP_VERSION = "3.0.0"
+APP_VERSION = "4.0.0"
+
+
+def require_write_key(x_api_key: str | None = Header(None, alias="X-API-Key")):
+    """v4 optional hardening: when env MM_API_KEY is set, every POST/PATCH/
+    DELETE under /api/ needs the matching X-API-Key header. Reads (GETs) and
+    /api/health stay open. When MM_API_KEY is unset (the default), this is a
+    no-op and behaviour is identical to v3."""
+    key = os.getenv("MM_API_KEY")
+    if key and x_api_key != key:
+        raise HTTPException(
+            status_code=401,
+            detail="This register is protected — send the access key in the "
+                   "X-API-Key header.")
 
 app = FastAPI(title="Minute Man API", version=APP_VERSION)
 
@@ -107,13 +132,15 @@ class MinutesRequest(BaseModel):
 
 @app.get("/api/health")
 def health_check(session: Session = Depends(get_session)):
-    # v3: also report database status + how many meetings are stored.
+    # v3: database status + stored count. v4: schema_version + sites/people.
     try:
         meetings_stored = crud.count_meetings(session)
+        sites = crud.count_sites(session)
+        people = crud.count_people(session)
         database = "ok"
     except Exception:
         logger.exception("Health check: database error")
-        meetings_stored = 0
+        meetings_stored = sites = people = 0
         database = "error"
     return {
         "status": "ok",
@@ -124,10 +151,14 @@ def health_check(session: Session = Depends(get_session)):
         "openai_key": bool(os.getenv("OPENAI_API_KEY")),
         "database": database,
         "meetings_stored": meetings_stored,
+        "schema_version": get_schema_version() if database == "ok" else None,
+        "sites": sites,
+        "people": people,
+        "api_key_required": bool(os.getenv("MM_API_KEY")),
     }
 
 
-@app.post("/api/minutes")
+@app.post("/api/minutes", dependencies=[Depends(require_write_key)])
 def make_minutes(req: MinutesRequest):
     """Turn a raw transcript into structured minutes ready for export.
 
@@ -153,6 +184,10 @@ def make_minutes(req: MinutesRequest):
         logger.exception("Extraction failed")
         raise HTTPException(status_code=502, detail=f"Model provider error: {exc}")
 
+    # v4: tell the caller which provider actually ran, so the front-end can
+    # store the real value on the saved meeting.
+    provider_used = (req.provider or os.getenv("DEFAULT_PROVIDER", "anthropic")).lower()
+
     # Merge the model's output with the app-supplied metadata and attendance
     # (which never comes from the model).
     common = {
@@ -170,6 +205,7 @@ def make_minutes(req: MinutesRequest):
         # General template: summary/topics/actions/decisions — deliberately NO
         # hazards or incidents keys at all.
         common["topics"] = extracted.get("topics", [])
+        common["provider_used"] = provider_used  # v4
         return common
 
     # Safety (default): the v2.2 shape plus incidents + summary. Validating
@@ -180,7 +216,7 @@ def make_minutes(req: MinutesRequest):
         incidents=extracted.get("incidents", []),
         hazards=extracted.get("hazards", []),
     )
-    return payload.model_dump()
+    return payload.model_dump() | {"provider_used": provider_used}  # v4 echo
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +245,9 @@ class MeetingActionIn(BaseModel):
     who: str = ""
     what: str
     by_when: str = ""
+    # v4: set when the leader "re-commits" a carried-over action into this
+    # meeting — creates a fresh row linked back to the original meeting.
+    carried_from_meeting_id: Optional[int] = None
 
 
 class MeetingSaveRequest(BaseModel):
@@ -231,9 +270,13 @@ class MeetingSaveRequest(BaseModel):
     hazards: List[MeetingHazardIn] = []
     actions: List[MeetingActionIn] = []
     decisions: List[str] = []
+    # v4: ids of open actions from previous meetings the leader acknowledged
+    # as still outstanding — recorded in the meeting's extra JSON, never
+    # duplicated as new action rows.
+    carried_over: List[int] = []
 
 
-@app.post("/api/meetings", status_code=200)
+@app.post("/api/meetings", status_code=200, dependencies=[Depends(require_write_key)])
 def save_meeting(req: MeetingSaveRequest, session: Session = Depends(get_session)):
     """Persist a full meeting record. Returns the saved meeting with its id."""
     try:
@@ -251,17 +294,37 @@ def list_meetings(
     site_name: Optional[str] = Query(None, description="Filter: exact site name"),
     date_from: Optional[str] = Query(None, alias="from", description="Filter: meeting_date >= (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, alias="to", description="Filter: meeting_date <= (YYYY-MM-DD)"),
+    q: Optional[str] = Query(None, description="v4: substring search over site name + meeting type"),
+    include_archived: bool = Query(False, description="v4: include archived (soft-deleted) meetings"),
     limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
     session: Session = Depends(get_session),
 ):
     """List saved meetings, newest first — lightweight rows (no transcript,
-    children as counts)."""
+    children as counts). v4 adds q / include_archived / offset."""
     if template and template not in ("safety", "general"):
         raise HTTPException(status_code=400,
                             detail='template filter must be "safety" or "general".')
     rows = crud.list_meetings(session, template=template, site_name=site_name,
-                              date_from=date_from, date_to=date_to, limit=limit)
+                              date_from=date_from, date_to=date_to, limit=limit,
+                              offset=offset, q_text=q, include_archived=include_archived)
     return {"meetings": rows, "count": len(rows)}
+
+
+class MeetingPatch(BaseModel):
+    """v4: the only PATCHable meeting field for now is `archived`."""
+
+    archived: bool
+
+
+@app.patch("/api/meetings/{meeting_id}", dependencies=[Depends(require_write_key)])
+def patch_meeting(meeting_id: int, req: MeetingPatch,
+                  session: Session = Depends(get_session)):
+    """Archive (soft delete) / unarchive. The UI default instead of DELETE."""
+    m = crud.set_meeting_archived(session, meeting_id, req.archived)
+    if m is None:
+        raise HTTPException(status_code=404, detail=f"No meeting with id {meeting_id}.")
+    return {"id": m.id, "archived": bool(m.archived)}
 
 
 @app.get("/api/meetings/{meeting_id}")
@@ -273,12 +336,93 @@ def get_meeting(meeting_id: int, session: Session = Depends(get_session)):
     return crud.meeting_to_dict(m)
 
 
-@app.delete("/api/meetings/{meeting_id}")
+@app.delete("/api/meetings/{meeting_id}", dependencies=[Depends(require_write_key)])
 def delete_meeting(meeting_id: int, session: Session = Depends(get_session)):
-    """Hard delete (children cascade). Simple is fine for v3."""
+    """Hard delete (children cascade). Kept from v3 — the v4 UI default is
+    archive; delete is reachable from the archived view."""
     if not crud.delete_meeting(session, meeting_id):
         raise HTTPException(status_code=404, detail=f"No meeting with id {meeting_id}.")
     return {"deleted": meeting_id}
+
+
+# ---------------------------------------------------------------------------
+# v4 — cross-meeting Action Register
+# ---------------------------------------------------------------------------
+@app.get("/api/actions")
+def list_actions(
+    status: str = Query("open", description='"open" (default) | "closed" | "all"'),
+    who: Optional[str] = Query(None, description="free-text OR canonical person name"),
+    site_name: Optional[str] = Query(None),
+    template: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None, alias="from"),
+    date_to: Optional[str] = Query(None, alias="to"),
+    overdue: bool = Query(False, description="true = only overdue open actions"),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    session: Session = Depends(get_session),
+):
+    """The register: every action across every (non-archived) meeting, with
+    meeting context and a computed `overdue` flag. Sort: overdue first, then
+    due date (no-date last), then newest meeting."""
+    if status not in ("open", "closed", "all"):
+        raise HTTPException(status_code=422,
+                            detail='status must be "open", "closed" or "all".')
+    if template and template not in ("safety", "general"):
+        raise HTTPException(status_code=400,
+                            detail='template filter must be "safety" or "general".')
+    rows, total = crud.list_actions(
+        session, status=status, who=who, site_name=site_name, template=template,
+        date_from=date_from, date_to=date_to, overdue=overdue,
+        limit=limit, offset=offset)
+    return {"actions": rows, "count": total}
+
+
+class ActionPatch(BaseModel):
+    status: str  # "closed" | "open"
+    closed_by: Optional[str] = None
+
+
+@app.patch("/api/actions/{action_id}", dependencies=[Depends(require_write_key)])
+def patch_action(action_id: int, req: ActionPatch,
+                 session: Session = Depends(get_session)):
+    """Close (stamps closed_at server-side + closed_by) or reopen (clears
+    both)."""
+    if req.status not in ("open", "closed"):
+        raise HTTPException(status_code=422,
+                            detail='status must be "open" or "closed".')
+    row = crud.set_action_status(session, action_id, req.status, req.closed_by)
+    if row is None:
+        raise HTTPException(status_code=404, detail=f"No action with id {action_id}.")
+    return row
+
+
+# ---------------------------------------------------------------------------
+# v4 — site history
+# ---------------------------------------------------------------------------
+@app.get("/api/hazards")
+def list_hazards(
+    site_name: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None, alias="from"),
+    date_to: Optional[str] = Query(None, alias="to"),
+    limit: int = Query(200, ge=1, le=1000),
+    session: Session = Depends(get_session),
+):
+    rows = crud.list_hazards(session, site_name=site_name, date_from=date_from,
+                             date_to=date_to, limit=limit)
+    return {"hazards": rows, "count": len(rows)}
+
+
+@app.get("/api/incidents")
+def list_incidents(
+    site_name: Optional[str] = Query(None),
+    date_from: Optional[str] = Query(None, alias="from"),
+    date_to: Optional[str] = Query(None, alias="to"),
+    limit: int = Query(200, ge=1, le=1000),
+    session: Session = Depends(get_session),
+):
+    rows = crud.list_incidents(session, site_name=site_name, date_from=date_from,
+                               date_to=date_to, limit=limit)
+    return {"incidents": rows, "count": len(rows)}
 
 
 # ---------------------------------------------------------------------------

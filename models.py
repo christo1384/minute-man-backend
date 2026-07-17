@@ -1,5 +1,22 @@
 """
-Minute Man v3 — SQLAlchemy models (schema version 1).
+Minute Man v4 — SQLAlchemy models (schema version 2).
+
+Schema v2 delta over v1 (all ADDITIVE — see alembic/versions/0001…py for the
+in-place migration of live v3 databases):
+
+  * New tables `sites` and `people` — canonical names + `aliases` JSON.
+    Free text remains the source of truth on the existing columns
+    (meetings.site_name, actions.who, attendees.name); nullable FK columns
+    (`meetings.site_id`, `actions.who_id`, `attendees.person_id`) sit
+    alongside, matched EXACTLY (case/whitespace-insensitive) — no fuzzy
+    auto-merge, ever (see matching.py).
+  * meetings.archived (soft delete — the UI default; hard DELETE remains).
+  * actions.closed_by (who marked it closed), actions.carried_from_meeting_id
+    (provenance when a carried-over action is re-committed into a new
+    meeting), actions.due_date (best-effort unambiguous parse of the free-
+    text by_when, anchored to the meeting date — see dates.py; NULL = no
+    date, never overdue).
+  * Indexes: actions(status), actions(who), meetings(archived), all new FKs.
 
 Design notes — why this schema is future-proof (per 02-DATABASE-DESIGN):
 
@@ -26,11 +43,12 @@ Boolean, DateTime(timezone=True), generic JSON) so the same models run on
 SQLite (default) and PostgreSQL (via DATABASE_URL) unmodified.
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import (
     JSON,
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Integer,
@@ -48,6 +66,34 @@ class Base(DeclarativeBase):
     pass
 
 
+class Site(Base):
+    """v2 — canonical site names. `meetings.site_name` free text stays the
+    source of truth; this table exists so cross-meeting queries can group by
+    site reliably. `aliases` records raw spellings seen that map here."""
+
+    __tablename__ = "sites"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(200), unique=True, nullable=False)  # canonical display name
+    aliases: Mapped[list] = mapped_column(JSON, default=list)
+    extra: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class Person(Base):
+    """v2 — canonical people (dedupe of attendees/assignees). Same model as
+    sites: free text stays on the rows, FKs point here on exact match."""
+
+    __tablename__ = "people"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)  # canonical
+    aliases: Mapped[list] = mapped_column(JSON, default=list)
+    role: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    extra: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class Meeting(Base):
     """One row per meeting — the parent record."""
 
@@ -57,6 +103,9 @@ class Meeting(Base):
     template: Mapped[str] = mapped_column(String(20), nullable=False, index=True)  # "safety" | "general"
     meeting_type: Mapped[str | None] = mapped_column(String(100))  # display label, e.g. "Toolbox Talk"
     site_name: Mapped[str | None] = mapped_column(String(200), index=True)
+    site_id: Mapped[int | None] = mapped_column(
+        ForeignKey("sites.id"), nullable=True, index=True)  # v2: exact-match FK alongside the free text
+    archived: Mapped[bool] = mapped_column(Boolean, default=False, index=True)  # v2: soft delete
     meeting_date: Mapped[str | None] = mapped_column(String(20), index=True)  # ISO YYYY-MM-DD (string keeps parity with the API)
     led_by: Mapped[str | None] = mapped_column(String(120))
     summary: Mapped[str | None] = mapped_column(Text)  # the minutes summary paragraph(s)
@@ -78,7 +127,8 @@ class Meeting(Base):
     hazards: Mapped[list["Hazard"]] = relationship(
         back_populates="meeting", cascade="all, delete-orphan", passive_deletes=True)
     actions: Mapped[list["Action"]] = relationship(
-        back_populates="meeting", cascade="all, delete-orphan", passive_deletes=True)
+        back_populates="meeting", cascade="all, delete-orphan", passive_deletes=True,
+        foreign_keys="Action.meeting_id")  # v2: Action also FKs meetings via carried_from_meeting_id
     decisions: Mapped[list["Decision"]] = relationship(
         back_populates="meeting", cascade="all, delete-orphan", passive_deletes=True)
 
@@ -92,6 +142,8 @@ class Attendee(Base):
     name: Mapped[str] = mapped_column(String(120), nullable=False)
     signature: Mapped[str | None] = mapped_column(Text)  # signature data / initials, as today
     role: Mapped[str | None] = mapped_column(String(80), nullable=True)  # future use (e.g. "Supervisor")
+    person_id: Mapped[int | None] = mapped_column(
+        ForeignKey("people.id"), nullable=True, index=True)  # v2: exact-match FK
     extra: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
@@ -142,15 +194,22 @@ class Action(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     meeting_id: Mapped[int] = mapped_column(
         ForeignKey("meetings.id", ondelete="CASCADE"), nullable=False, index=True)
-    who: Mapped[str | None] = mapped_column(String(120))  # "Unassigned — needs an owner" allowed
+    who: Mapped[str | None] = mapped_column(String(120), index=True)  # "Unassigned — needs an owner" allowed
+    who_id: Mapped[int | None] = mapped_column(
+        ForeignKey("people.id"), nullable=True, index=True)  # v2: exact-match FK
     what: Mapped[str] = mapped_column(Text, nullable=False)
     by_when: Mapped[str | None] = mapped_column(String(80))  # stated timeframe as text (matches engine output)
-    status: Mapped[str] = mapped_column(String(20), default="open")  # future action-tracking across meetings
-    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # future use
+    due_date: Mapped[date | None] = mapped_column(Date, nullable=True)  # v2: unambiguous parse of by_when (dates.py); NULL = no date
+    status: Mapped[str] = mapped_column(String(20), default="open", index=True)  # v4 register uses this
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_by: Mapped[str | None] = mapped_column(String(120), nullable=True)  # v2: who marked it closed
+    carried_from_meeting_id: Mapped[int | None] = mapped_column(
+        ForeignKey("meetings.id", ondelete="SET NULL"),
+        nullable=True, index=True)  # v2: provenance when re-committed via carry-over; survives source deletion
     extra: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
-    meeting: Mapped[Meeting] = relationship(back_populates="actions")
+    meeting: Mapped[Meeting] = relationship(back_populates="actions", foreign_keys=[meeting_id])
 
 
 class Decision(Base):
