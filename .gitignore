@@ -3,3 +3,7 @@
 venv/
 __pycache__/
 *.pyc
+
+# Local database files - data lives on the server / in Neon, never in git.
+*.db
+minuteman.db
