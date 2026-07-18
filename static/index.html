@@ -520,6 +520,11 @@
       </select>
     </div>
 
+    <div class="row noprint" id="officeRow" style="margin-top:16px;display:none">
+      <button type="button" class="chip" id="openOffice">🏢 Connect the office…</button>
+      <span class="meta">Calendar feed, task webhooks &amp; digest</span>
+    </div>
+
     <label class="fl" style="margin-top:18px">Crew list</label>
     <div class="crewhead"><span>Name</span><span>Initials</span><span></span></div>
     <div class="crewlist" id="crewList"></div>
@@ -577,6 +582,33 @@
     </div>
     <div class="actions">
       <button class="btn btn-ghost" id="regClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CONNECT THE OFFICE MODAL (v5.1) ============ -->
+<div class="modal hidden" id="officeModal">
+  <div class="panel">
+    <h2>Connect the office</h2>
+    <p class="sub">Standards, not passwords: the office <b>subscribes</b> to a calendar feed and <b>receives</b> task webhooks — Minute Man never sees a Microsoft or Google login. Full recipes are in the OFFICE-LOOP guides.</p>
+
+    <p style="margin:10px 0 2px"><b>📅 Calendar feed (ICS)</b> <span class="meta">Outlook: Add calendar → Subscribe from web · Google: Other calendars → From URL · Teams: Add calendar</span></p>
+    <div id="feedList" style="max-height:120px;overflow-y:auto"></div>
+    <p class="savefeed" id="feedNewUrl" style="word-break:break-all"></p>
+    <div class="row"><button type="button" class="chip" id="feedCreate">+ Create feed link</button>
+      <button type="button" class="chip hidden" id="feedCopy">📋 Copy link</button></div>
+
+    <p style="margin:14px 0 2px"><b>🔔 Task webhooks</b> <span class="meta">Point Power Automate / Zapier at a URL; every action lands as a task</span></p>
+    <div id="whList" style="max-height:120px;overflow-y:auto"></div>
+    <div class="ar-controls"><input type="text" id="whUrl" placeholder="https://…(your flow's HTTP trigger URL)" />
+      <button type="button" class="ar-btn" id="whAdd" style="min-height:40px">Add</button></div>
+    <p class="savefeed" id="whStatus" style="word-break:break-all"></p>
+
+    <p style="margin:14px 0 2px"><b>✉️ Daily email digest</b></p>
+    <p class="meta" id="emailStatus">—</p>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="officeClose" type="button">Close</button>
     </div>
   </div>
 </div>
@@ -639,7 +671,7 @@
 //                   Calls go to /api/minutes on the same address — no CORS, nothing to edit.
 //   "https://..." → a separate backend at that URL (e.g. Cloudflare page + Render backend).
 const BACKEND_URL = "SAME_ORIGIN";
-const APP_VERSION = "5.0";
+const APP_VERSION = "5.1";
 const backendConfigured = () => BACKEND_URL !== "";
 const apiBase = () => BACKEND_URL === "SAME_ORIGIN" ? "" : BACKEND_URL.replace(/\/+$/, "");
 // Wake the backend the moment the page opens (free hosting sleeps when idle,
@@ -2175,6 +2207,84 @@ document.getElementById('mvPlay').addEventListener('click',()=>{ if(mvMeeting) o
 document.getElementById('mvPdf').addEventListener('click',()=>exportStored('pdf'));
 document.getElementById('mvXlsx').addEventListener('click',()=>exportStored('excel'));
 
+// ---------- v5.1: Connect the office (feeds / webhooks / digest status) -----
+const officeModal=document.getElementById('officeModal');
+let lastFeedUrl='';
+async function refreshOffice(){
+  try{
+    const [fRes,wRes,hRes]=await Promise.all([
+      fetch(apiBase()+'/api/feeds'), fetch(apiBase()+'/api/webhooks'), fetch(apiBase()+'/api/health')]);
+    const feeds=(await fRes.json()).feeds||[], hooks=(await wRes.json()).webhooks||[], h=await hRes.json();
+    document.getElementById('feedList').innerHTML = feeds.length
+      ? feeds.map(f=>'<div class="ar-row"><div style="flex:1"><div class="ar-what">'+escapeHtml(f.label||'Feed')+' <span class="ar-meta">('+escapeHtml(f.token_hint)+')</span></div>'
+          +'<div class="ar-meta">'+(f.revoked?'revoked':'active')+' · created '+escapeHtml((f.created_at||'').slice(0,10))+'</div></div>'
+          +(f.revoked?'':'<button type="button" class="ar-btn feed-revoke" data-id="'+f.id+'">Revoke</button>')+'</div>').join('')
+      : '<p class="ar-meta">No feed links yet — create one and paste it into Outlook/Google Calendar.</p>';
+    document.getElementById('feedList').querySelectorAll('.feed-revoke').forEach(b=>b.addEventListener('click',async()=>{
+      if(!window.confirm('Revoke this feed link? Calendars using it will stop updating.')) return;
+      await apiFetch(apiBase()+'/api/feeds/'+b.dataset.id,{method:'DELETE'}); refreshOffice();
+    }));
+    document.getElementById('whList').innerHTML = hooks.length
+      ? hooks.map(w=>'<div class="ar-row"><div style="flex:1"><div class="ar-what">'+escapeHtml(w.url)+'</div>'
+          +'<div class="ar-meta">'+(w.active?'active':'off')+' · last: '+escapeHtml(w.last_status||'never fired')+'</div></div>'
+          +'<button type="button" class="ar-btn wh-test" data-id="'+w.id+'">Test</button>'
+          +'<button type="button" class="ar-btn wh-toggle" data-id="'+w.id+'" data-active="'+w.active+'">'+(w.active?'Pause':'Resume')+'</button></div>').join('')
+      : '<p class="ar-meta">No webhooks yet — add your Power Automate / Zapier trigger URL.</p>';
+    document.getElementById('whList').querySelectorAll('.wh-test').forEach(b=>b.addEventListener('click',async()=>{
+      const st=document.getElementById('whStatus'); st.textContent='Testing…'; st.className='savefeed';
+      try{ const r=await apiFetch(apiBase()+'/api/webhooks/'+b.dataset.id+'/test',{method:'POST'});
+        const j=await r.json();
+        st.textContent = j.delivered ? '✓ Delivered (HTTP '+j.status+') — your flow received a signed test payload.' : '✕ Not delivered: '+(j.error||('HTTP '+j.status));
+        st.className='savefeed '+(j.delivered?'ok':'err');
+      }catch(e){ st.textContent='✕ Test failed ('+e.message+')'; st.className='savefeed err'; }
+    }));
+    document.getElementById('whList').querySelectorAll('.wh-toggle').forEach(b=>b.addEventListener('click',async()=>{
+      await apiFetch(apiBase()+'/api/webhooks/'+b.dataset.id,{method:'PATCH',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({active: b.dataset.active!=='true'})});
+      refreshOffice();
+    }));
+    document.getElementById('emailStatus').textContent = h.email_configured
+      ? 'Configured on the server — a daily digest of overdue and due actions goes out each morning.'
+      : 'Not configured. Set the MM_SMTP_* settings on the server to enable a daily digest (see OFFICE-LOOP guide).';
+  }catch(_){}
+}
+document.getElementById('openOffice').addEventListener('click',()=>{
+  closeSettings(); officeModal.classList.remove('hidden');
+  document.getElementById('feedNewUrl').textContent=''; document.getElementById('feedCopy').classList.add('hidden');
+  refreshOffice();
+});
+document.getElementById('officeClose').addEventListener('click',()=>officeModal.classList.add('hidden'));
+officeModal.addEventListener('click',e=>{ if(e.target===officeModal) officeModal.classList.add('hidden'); });
+document.getElementById('feedCreate').addEventListener('click',async()=>{
+  const st=document.getElementById('feedNewUrl');
+  try{
+    const r=await apiFetch(apiBase()+'/api/feeds',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label:'Office calendar'})});
+    const j=await r.json();
+    lastFeedUrl=(BACKEND_URL==='SAME_ORIGIN'?window.location.origin:apiBase())+j.url_path;
+    st.textContent='Your feed link (copy it now — it is only shown once): '+lastFeedUrl;
+    st.className='savefeed ok';
+    document.getElementById('feedCopy').classList.remove('hidden');
+    refreshOffice();
+  }catch(e){ st.textContent='✕ Couldn’t create the feed ('+e.message+')'; st.className='savefeed err'; }
+});
+document.getElementById('feedCopy').addEventListener('click',async()=>{
+  try{ await navigator.clipboard.writeText(lastFeedUrl); document.getElementById('feedCopy').textContent='✓ Copied'; }
+  catch(_){ window.prompt('Copy the feed link:', lastFeedUrl); }
+});
+document.getElementById('whAdd').addEventListener('click',async()=>{
+  const url=document.getElementById('whUrl').value.trim(); const st=document.getElementById('whStatus');
+  if(!url) return;
+  try{
+    const r=await apiFetch(apiBase()+'/api/webhooks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const j=await r.json();
+    if(!r.ok) throw new Error(j.detail||r.status);
+    st.textContent='✓ Added. Signing secret (shown once — save it if your flow verifies signatures): '+j.secret;
+    st.className='savefeed ok';
+    document.getElementById('whUrl').value='';
+    refreshOffice();
+  }catch(e){ st.textContent='✕ '+String(e.message||e).slice(0,140); st.className='savefeed err'; }
+});
+
 // ---------- Home / front door + install ------------------------------------
 function enterApp(screen){ document.body.classList.remove('home-mode'); show(screen||1); }
 function goHome(){ document.body.classList.add('home-mode'); window.scrollTo({top:0}); refreshHomePrev(); }
@@ -2191,6 +2301,8 @@ refreshHomePrev();
 // v5: template upload is server-backed — online only.
 document.getElementById('tplUploadRow').style.display = backendConfigured() ? '' : 'none';
 if(backendConfigured()) refreshTemplates();
+// v5.1: office-loop features are online only too.
+document.getElementById('officeRow').style.display = backendConfigured() ? '' : 'none';
 // Version stamp on the front door — makes it obvious which build is live.
 { const v=document.getElementById('appVer'); if(v) v.textContent = 'v'+APP_VERSION+(backendConfigured()? '' : ' · offline demo'); }
 
