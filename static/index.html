@@ -1,0 +1,2214 @@
+<!DOCTYPE html>
+<html lang="en-NZ">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Minute Man — Voice to Toolbox-Talk Minutes</title>
+<!-- Installable app / iPhone home-screen -->
+<meta name="theme-color" content="#2F4F4F" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Minute Man" />
+<link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAGO0lEQVR4nO3c0WvWVRzH8c/KzUqduoJuUjetzDZx8zIQIiyTiP0BUc2ICNP+hv6BbkoS7CK9qpsCLyK7Ni9zQxyYQga1C5ESNBJFs4uHB2u6ec7vnKfnnM/v/QJB8HD8cX7v/Xj23fNsYMf09B0BJh7q9wUAORE0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rKzo9wX8H+Z2He/3JRRj8uR0vy+hpyyDJuClLT4bt8CtgibkeN0zcwnbImhCTucSdtVBE3J+tYdd7ZSDmHur1vOtMuhaD7s2NZ5zdUHXeMg1q+28qwq6tsN1UdO5VxN0TYfqqJbzryLoWg7TXQ33ofigazjENin9fhQfNBCj6KBLfxq0Vcn3peiggVjFBl3yUwDl3p9igwaaKDLoUr/68V8l3qcigwaaImhYIWhYKS7oEl+XYWml3a/iggZSEDSsEDSsEDSsVP2p72hrnpLe+zV9n1vXpSMbpOu/p++1lB3vS7sPp+/zy/fS16+m71MJntBNrHhU2v5ub/+PqQO93d8UQTe1Y7808HBv9t60W3p8vDd7myPopoY3Sk/36JexTH3Ym31bgKBTTB3Mv+faMWnza/n3bQmCTrHhRemJ7Xn3nDooDXBbmuLkUuV8Sg+ukib25duvhQg61bY3pEfW59lr/G1p5bo8e7UUQacafCzfCI9RXTKCzmFyf/rr3tFXpJFtea6nxQg6h+FRacvraXswqsuCoHNJCXLdFmlsb75raTGCzmXjS81/useoLhtOMacm39QNrpbGZ7JfSlsRdIjbN8LWPf9m/NhtYkZauTbvdbQYQYc491XYusFV0sQ7ERsPSJOBT/Wb16Sfv43Yu50IOsS5L6Xrl8PWTn0Q/np4dI80sjVs7fzRTtRYFkGHuH1DOvN52Nq1m8PfXLQzdDJyR5o9FLi23Qg61Nxn0t+3wtaGvL9j/TPSWOAnSS6ekK6cD1vbcgQd6s8F6cI3YWs3vSyNPLf8mqmDkgbC9jv9Sdg6EHSU2U/D1y73lB5aEz6qu3K+87lABCHoGAs/SJdOh60df0saGr7/v03s60QdYvaQpDtha0HQ0UKf0oOrl3hvc+Sobv5o6JVBBB0vaoR3QPe8Th7b2/mGMMTZLxjVRSLoWDEjvHVP3/umo5hR3RyjulgE3UTMCG/nv745HNnaed9ziIsnpCsX4q+t5Qi6iZgR3ugeaf2znb8zqus5gm5qNjS4gc5r6aHhzmcGQzCqa6xdv9sup4VTnRHekzsfvHZ8RvrrcmfyEYJRXWM8oVOEjvCG1kgvfBS29uZVRnUJCDpFzAgv9B14Z48yqktA0Clu35DOHMm4IaO6VASdau5w+AjvQRjVJSPoVDEjvAdhVJeMoHMIHuEt44+fGNVlQNA5dEd4KeYY1eVA0LnEvFd6sZtXpflj+a6lxQg6l5gR3mKM6rIh6Fwaj/AY1eVE0Dk1GeFd/I5RXUYEnVOTEd7phNfeuAdB5xYzwmNUlx1B57ZwSrr0Y9haRnXZEXQvhIzwGNX1BO+H7oX5Y8TaJzyhYYWgYYWgYYWgYYWgYYWgYYWgYYWgYYWgYYWgYaVdP/q+9pv0ceAvSyzRiZnOHyyJJzSsEDSsEDSsEDSsEDSsEDSsFBf05Mnpfl8CIpR2v4oLGkhB0LBC0LBSZNClvS7D/ZV4n4oMGmiq2KBL/OrHXaXen2KDBpooOuhSnwJtV/J9KTpoIFbxQZf8NGij0u9H8UFL5R9iW9RwH6oIWqrjMJ3Vcv7VBC3Vc6huajr3qoKW6jpcB7Wdd3VBS/Udcq1qPOcqg5bqPOya1Hq+Vf9eju6hz+063ucr8VFryF1VB91F2OlqD7nLIuguwo7nEnKXVdBdi28Sgd/lFvBilkEv5n4TcVe1Uw7gfggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVv4BgIRKYfbellYAAAAASUVORK5CYII=" />
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAGO0lEQVR4nO3c0WvWVRzH8c/KzUqduoJuUjetzDZx8zIQIiyTiP0BUc2ICNP+hv6BbkoS7CK9qpsCLyK7Ni9zQxyYQga1C5ESNBJFs4uHB2u6ec7vnKfnnM/v/QJB8HD8cX7v/Xj23fNsYMf09B0BJh7q9wUAORE0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rBA0rKzo9wX8H+Z2He/3JRRj8uR0vy+hpyyDJuClLT4bt8CtgibkeN0zcwnbImhCTucSdtVBE3J+tYdd7ZSDmHur1vOtMuhaD7s2NZ5zdUHXeMg1q+28qwq6tsN1UdO5VxN0TYfqqJbzryLoWg7TXQ33ofigazjENin9fhQfNBCj6KBLfxq0Vcn3peiggVjFBl3yUwDl3p9igwaaKDLoUr/68V8l3qcigwaaImhYIWhYKS7oEl+XYWml3a/iggZSEDSsEDSsEDSsVP2p72hrnpLe+zV9n1vXpSMbpOu/p++1lB3vS7sPp+/zy/fS16+m71MJntBNrHhU2v5ub/+PqQO93d8UQTe1Y7808HBv9t60W3p8vDd7myPopoY3Sk/36JexTH3Ym31bgKBTTB3Mv+faMWnza/n3bQmCTrHhRemJ7Xn3nDooDXBbmuLkUuV8Sg+ukib25duvhQg61bY3pEfW59lr/G1p5bo8e7UUQacafCzfCI9RXTKCzmFyf/rr3tFXpJFtea6nxQg6h+FRacvraXswqsuCoHNJCXLdFmlsb75raTGCzmXjS81/useoLhtOMacm39QNrpbGZ7JfSlsRdIjbN8LWPf9m/NhtYkZauTbvdbQYQYc491XYusFV0sQ7ERsPSJOBT/Wb16Sfv43Yu50IOsS5L6Xrl8PWTn0Q/np4dI80sjVs7fzRTtRYFkGHuH1DOvN52Nq1m8PfXLQzdDJyR5o9FLi23Qg61Nxn0t+3wtaGvL9j/TPSWOAnSS6ekK6cD1vbcgQd6s8F6cI3YWs3vSyNPLf8mqmDkgbC9jv9Sdg6EHSU2U/D1y73lB5aEz6qu3K+87lABCHoGAs/SJdOh60df0saGr7/v03s60QdYvaQpDtha0HQ0UKf0oOrl3hvc+Sobv5o6JVBBB0vaoR3QPe8Th7b2/mGMMTZLxjVRSLoWDEjvHVP3/umo5hR3RyjulgE3UTMCG/nv745HNnaed9ziIsnpCsX4q+t5Qi6iZgR3ugeaf2znb8zqus5gm5qNjS4gc5r6aHhzmcGQzCqa6xdv9sup4VTnRHekzsfvHZ8RvrrcmfyEYJRXWM8oVOEjvCG1kgvfBS29uZVRnUJCDpFzAgv9B14Z48yqktA0Clu35DOHMm4IaO6VASdau5w+AjvQRjVJSPoVDEjvAdhVJeMoHMIHuEt44+fGNVlQNA5dEd4KeYY1eVA0LnEvFd6sZtXpflj+a6lxQg6l5gR3mKM6rIh6Fwaj/AY1eVE0Dk1GeFd/I5RXUYEnVOTEd7phNfeuAdB5xYzwmNUlx1B57ZwSrr0Y9haRnXZEXQvhIzwGNX1BO+H7oX5Y8TaJzyhYYWgYYWgYYWgYYWgYYWgYYWgYYWgYYWgYYWgYaVdP/q+9pv0ceAvSyzRiZnOHyyJJzSsEDSsEDSsEDSsEDSsEDSsFBf05Mnpfl8CIpR2v4oLGkhB0LBC0LBSZNClvS7D/ZV4n4oMGmiq2KBL/OrHXaXen2KDBpooOuhSnwJtV/J9KTpoIFbxQZf8NGij0u9H8UFL5R9iW9RwH6oIWqrjMJ3Vcv7VBC3Vc6huajr3qoKW6jpcB7Wdd3VBS/Udcq1qPOcqg5bqPOya1Hq+Vf9eju6hz+063ucr8VFryF1VB91F2OlqD7nLIuguwo7nEnKXVdBdi28Sgd/lFvBilkEv5n4TcVe1Uw7gfggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVggaVv4BgIRKYfbellYAAAAASUVORK5CYII=" />
+<link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%20%22Minute%20Man%22%2C%20%22short_name%22%3A%20%22Minute%20Man%22%2C%20%22description%22%3A%20%22Speak%20the%20toolbox%20talk%20%5Cu2014%20walk%20away%20with%20a%20signed%20record.%22%2C%20%22start_url%22%3A%20%22.%22%2C%20%22scope%22%3A%20%22.%22%2C%20%22display%22%3A%20%22standalone%22%2C%20%22background_color%22%3A%20%22%232F4F4F%22%2C%20%22theme_color%22%3A%20%22%232F4F4F%22%2C%20%22orientation%22%3A%20%22portrait%22%2C%20%22icons%22%3A%20%5B%7B%22src%22%3A%20%22data%3Aimage/png%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAAG30lEQVR4nO3dz4uVVRzH8c/88MdYU0H%2ByByDYjCFdK4GRtAUrQsniUqsXUmlVMv%2BiloUhUKuaiG5SXRZbWxRCjqjqShoJYTjYkgXSuPgTIvHyatzdc55nnPufc75vl/QIn187sNzzvs%2B9x6OY9fQyMiMAKO6O30BQCcRAEwjAJhGADCNAGAaAcA0AoBpBADTCACmEQBMIwCYRgAwjQBgGgHANAKAaQQA0wgAphEATCMAmEYAMI0AYBoBwDQCgGkEANMIAKYRAEwjAJhGADCNAGAaAcA0AoBpBADTCACmEQBMIwCYRgAwjQBgWm%2BnL6CdRocPdPoSktE4PNLpS2iL7ANg0pfTfN9yjiHLAJj0YeUcQ1YBMPHjm73HuYSQzZdgJn975XK/swggl8FITQ73PemPQDkMQOpS/0iU7BOAyV8vqY5HkgGkerNzl%2BK4JBdAijfZktTGJ7kAgJCSCiC1dxerUhqnZAJI6aYinfFKIoBUbibulMK4JREAEEvtA0jhXQT3Vvfxq30AQEwEANNqHUDdH59wU%2BdxrHUAQGwEANNqG0CdH5vwV9fxrG0AQDsQAEwjAJhGADCNAGAaAcA0AoBpSf9YlMpe3Sc9/VaYc50/KP2wJcy57ufBVdKOP6XuQEO3b1j6%2B5cw50oQT4BQnnpFevjJ%2BK/T2Blu8oMAgunqlhq74r5GzyJpw464r2EMAYS0/l1pwZJ451%2B3XepbFu/8BhFASIsekda9E%2B/8Gz%2BKd26jCCC0WJN01QvS8o1xzm0YAYS29Blp9cvhz7vp4/DnBAFEEfop0D8gDW4Ne05IIoA4BrdIDz0R7nxDLH3GQgAxdPUUkzaE3sUsfUZEALGsf0/q7at%2BnrXbpb6l1c%2BDlggglr5Hi3X7qlj6jIoAYqo6eQeGpeWNIJeC1gggpmVDxSQuayNLn7ERQGxlnwL9A9Lga0EvBXMRQBk3J92PHdxaTGZfjV3uS583b0ia8X8NEEAp5w9KU9fcju3ulYY%2B9Dt/7%2BJiFcnVue%2BlmWm/14AkAihn8qp0%2Blv34zfsKLYyu/Jd%2Bjz2pfuxuAMBlHXcY9L1LZPWbnM/3ud7w6XfpPEj7sfjDgRQ1sRp6a8f3Y93ndQDL/otfR7/wv1YzEEAVfg8BVY8Kz3%2B/PzH%2Bez6vDYund3vfjzmIIAqLhySrl5wP36%2Bdf3%2B1X5Ln2O7pekp9%2BMxBwFUMTMtjX7tfvya16UHVt779xs7i410Lm7ekE7scX9ttEQAVZ3c67EkukAa%2BqD17/UultZ77Po8t7/4CIRKCKCqySt%2BS6JD70s9C%2Bf%2B%2Brq3iw10ro7x5TcEAgjB58vwkhXSmjfm/rrP0uf4EZY%2BAyGAECZOSxd/cj/%2B7sk%2B8FKxcc4V7/7BEEAoPpNy5XPSY5tv/7/v0uc5lj5DIYBQLhySrv7hfvymW0%2BB/tXS4Ij7nzux59bmN4RAAKHMTEujX7kfv%2BbN4vtAY5ff0ufY7nLXh5YIICSfJdGehdKmTzx3fbL0GRoBhDR5RTrznfvxmz/1W/r0WW2CEwIIzefLcJfH7R8/Uuz8RFAEEJrvkqgrlj6jIIAYQn9UuX6Zpc9ICCCG8wf9lkTnM7abpc9ICCAG312i9zM9JY2x6zMWAojl5DfS1PXq5zm7X7p2qfp50BIBxDJ5RTrjsUv0Xvgrj1ERQExVf1rD%2BFGWPiMjgJgmTkkXfy7/51n6jI4AYiv7Eeb65eIHXiEqAoit7JLoGLs%2B24EAYiuzJDo9xa7PNiGAdvh9r9%2BSKEufbUMA7fDvP367RNn12TYE0C6uKzrjR6VLv8a9FvyPf3uzXSZOSZ91dfoqcBeeADCNAGAaAcA0AoBpBADTCACmEQBMIwCYRgAwjQBgmu2tEIe2Ff/l4HPbQ1kWTwCYRgAwjQBgGgHANAKAaQQA0wgAphEATKttAI3DHv90KGqvruNZ2wCAdiAAmFbrAOr62ISfOo9jrQMAYiMAmFb7AOr8%2BMT86j5%2BtQ8AiCmJAOr%2BLoLWUhi3JAKQ0riZuC2V8UomACmdm2pdSuOUVABAaMkFkNK7i0WpjU9yAUjp3WQrUhyXJAOQ0rzZOUt1PJL%2BYTKzN310%2BECHr8SuVCf%2BrGSfAM1SH4RU5XDfswhAymMwUpLL/U76I9Dd%2BEgUXy4Tf1ZWAcxqHiRiqC63Sd8sywCaEUM5OU/6ZtkH0MzKoMJdNl%2BCgTIIAKYRAEwjAJhGADCNAGAaAcA0AoBpBADTCACmEQBMIwCYRgAwjQBgGgHANAKAaQQA0wgAphEATCMAmEYAMI0AYBoBwDQCgGkEANMIAKYRAEwjAJhGADCNAGAaAcA0AoBpBADTCACmEQBMIwCY9h%2BT5lNdRhhUgQAAAABJRU5ErkJggg%3D%3D%22%2C%20%22sizes%22%3A%20%22192x192%22%2C%20%22type%22%3A%20%22image/png%22%2C%20%22purpose%22%3A%20%22any%20maskable%22%7D%2C%20%7B%22src%22%3A%20%22data%3Aimage/png%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAVDklEQVR4nO3d%2BbNedX3A8c/NSiCExQCylT1sWW5SO9qqQ51aWx0tVqVaBysuIAi1f0lnWououAHaMpRWB1pbHe3YqbZjp5bchAQSCAQQCrITCCHr7Q%2BPwZjk5m7P83zOOZ/X6zcw3O%2BHkfM973uec84zsuryy8cDAChlTvYAAMDwCQAAKEgAAEBBAgAAChIAAFCQAACAggQAABQkAACgIAEAAAUJAAAoSAAAQEECAAAKEgAAUJAAAICCBAAAFCQAAKAgAQAABQkAAChIAABAQQIAAAoSAABQkAAAgIIEAAAUJAAAoCABAAAFCQAAKEgAAEBBAgAAChIAAFCQAACAggQAABQkAACgIAEAAAUJAAAoSAAAQEECAAAKEgAAUJAAAICCBAAAFCQAAKAgAQAABQkAAChIAABAQQIAAAoSAABQkAAAgIIEAAAUJAAAoCABAAAFCQAAKEgAAEBBAgAAChIAAFCQAACAggQAABQkAACgIAEAAAUJAAAoSAAAQEECAAAKEgAAUJAAAICCBAAAFCQAAKAgAQAABQkAAChIAABAQQIAAAoSAABQkAAAgIIEAAAUJAAAoCABAAAFCQAAKEgAAEBBAgAAChIAAFCQAACAggQAABQkAACgIAEAAAUJAAAoSAAAQEECAAAKEgAAUJAAAICCBAAAFCQAAKAgAQAABQkAAChIAABAQQIAAAoSAABQkAAAgIIEAAAUJAAAoCABAAAFCQAAKEgAAEBBAgAAChIAAFDQvOwB4GBjb78rewQYiNEfX549ArxOAJDGiZ5qJvpvXhiQQQAwNE74cHgHHxuCgGEQAAyMEz7MjCBgGAQAfefED/21/5gSAvSTAKAvnPRh8A48zsQAsyUAmBUnfsjhqgCzJQCYESd%2BaAYhwEwJAKbFiR%2BaSQgwXQKAKXHih3YQAkyVAOCInPihnYQAk/FdAEzIyR/az3HMRFwB4BA2DOgWVwM4HFcA%2BDVO/tBdjm8OJAB4nc0Bus9xzn4%2BAsCGAMX4SIAIVwDKc/KHuhz/tQmAwhz8gH2gLgFQlIMe2M9%2BUJMAKMjBDhzMvlCPACjGQQ5MxP5QiwAoxMENTMY%2BUYcAKMJBDUyV/aIGAVCAgxmYLvtG9wmAjnMQAzNl/%2Bg2AdBhDl5gtuwj3SUAOspBC/SL/aSbBEAHOViBfrOvdI8AAICCBEDHqHRgUOwv3SIAOsTBCQyafaY7BEBHOCiBYbHfdIMAAICCBEAHqHFg2Ow77ScAWs5BCGSx/7SbAACAggRAi6lvIJt9qL0EAAAUJABaSnUDTWE/aicBAAAFCYAWUttA09iX2kcAAEBBAqBlVDbQVPandhEAAFCQAGgRdQ00nX2qPQQAABQkAACgIAHQEi6rAW1hv2oHAQAABQmAFlDTQNvYt5pPAABAQQIAAAoSAABQkABoOJ%2BjAW1l/2o2AQAABQkAAChIAABAQQKgwXx%2BBrSdfay5BAAAFCQAAKAgAQAABQkAAChIAABAQQKgodw5C3SF/ayZBAAAFCQAAKAgAQAABQkAAChIAABAQQIAAAoSAABQkAAAgIIEAAAUJAAAoCABAAAFzcseAI7orHdGfOgH2VP0z/c/GbHhG9lTNNOav4h4x19lT9E/N58Z8fLj2VPAhFwBgGFa/efZEzTUSMTo9dlDQCkCAIbp5NURp781e4rmOecPI064IHsKKEUAwLCN3pA9QfO4MgJDJwBg2JZ9MOKYU7OnaI4TLuhdAQCGSgDAsM2ZH7Hq2uwpmmP0hogYyZ4CyhEAkGHlNb0QqG7%2B4ojlV2VPASUJAMhwzBsjLrwie4p8l348YsGS7CmgJAEAWcrf%2BDYSsdoNkZBFAECWU98SccpvZk%2BR5%2BzfjzjxouwpoCwBAJkqXwWo/O8ODSAAINNFH4lYtDR7iuE77tyIc96TPQWUJgAg09yFESuvzp5i%2BFbfEDFi%2B4FMjkDItuq6iJG52VMMz/xjIpZ/InsKKE8AQLZjz4w4//LsKYbnko9FLDw%2BewooTwBAE1S6Ic6jf9AIAgCa4MzfjVi6PHuKwfuN34t4w6XZUwAhAKA5KvxmXOlKBzScAICmuPjKbn82vuTsiPPelz0F8EsCAJqi63fHj37Wo3/QII5GaJLR67t5kpy3KGLFp7KnAA7QwZ0GWuz48yLOeXf2FP13yZURR52YPQVwAAEATdPFmwFHO/jvBC0nAKBpzv6DiBOWZU/RP2dcFnHSyuwpgIMIAGickd69AF2x5nPZEwCHIQCgiZZfFTF/cfYUs1ftNcfQIgIAmmjBkohL/yx7itkb/WytLzqCFhEA0FRt/xhg3lERKz6dPQUwAQEATfWGS3rvzm%2Briz4asWhp9hTABAQANFmb353fxccZoUMEADTZee%2BNWHJW9hTTd/rbIk5enT0FcAQCAJpsZG7vRrq2afOVCyhCAEDTrfh07136bbH49IgLPpA9BTAJAQBNd9SJERf9afYUUzd6XcScedlTAJMQANAGbbmkPndhxIqrs6cApkAAQBucPBpx%2Bluzp5jchR%2BOOPrk7CmAKRAA0BZtuAqwpgUzAhEhAKA9LvhAxOLTsqeY2Gm/HXHKm7KnAKZIAEBbzJkfsfIz2VNMrA1XKIDXCQBok1WfiZi7IHuKQx1zasSyD2VPAUyDAIA2OfqUiGVXZE9xqFXX9q5QAK0hAKBtmvaO/bkLIlZekz0FME0CAGZq26M56576lmbdbLfsiohj3piz9rZHctaFDhAAMFNjN%2BWt3aSrAJk3/2X%2BfwAtJwBgpu67LWLnSzlrX/SRiEUn5ax9oDf%2BVsSpb85Ze/tTEQ/8Q87a0AECAGZq1ysRG2/JWXvuwoiVDXjl7prP5a297ksR%2B3bnrQ8tJwBgNtbeGBHjOWuvurb3dcFZjj45Ytmf5Ky9b3fE%2Bi/nrA0dIQBgNl7cErH1ezlrH3tmxPnvz1k7ovdSoqx3Emy%2Bs/cRADBjAgBm657P562d9e79OfN7VyCyrP2bvLWhIwQAzNYj34944YGctc%2B4LGLpiuGvu%2ByDed9L8IufRTz505y1oUMEAMzaeMTYF/KWz3gkMPPRv3v89g/9IACgHzbcErH7lZy1L74yYuHxw1vvlDURp/3O8NY70I5nIjbfkbM2dIwAgH7YtS1i4605a88/OmL5J4e33urER//W3xyxd2fe%2BtAhAgD6JfORwNXXR4wM4XBetLT3EqIM%2B/ZEjH0xZ23oIAEA/fL8pohHf5iz9nHnRpzz7sGvs/Ka3kuIMjz47YhXnshZGzpIAEA/ZT6eNugb8%2BbMi1h13WDXOBKP/kFfCQDop4e/G/HSwzlrn/2uiBOWDe7nn//HEceeMbiffyRPj0U88ZOctaGjBAD00/i%2BxG%2BoG4kYvX5wPz7z0T%2B//UPfCQDot3u/FrF7e87ay6%2BKmL%2B4/z/3pFURZ7y9/z93KnY8F7Hp9py1ocMEAPTbzhcj7v9WztoLlkRc%2BvH%2B/9zM3/7v/WrEnh1560NHCQAYhLU35q29us8fAxx1YsTFH%2B3vz5yq8b0R6zz6B4MgAGAQnt0Q8fMf5ax94sURZ72zfz9v5dUR8xb17%2BdNx5a7I7Y9mrM2dJwAgEHJvHFttE/fDzAy16N/0FECAAZly90R2x7LWfu890UsOXv2P%2Bf8P4pYctbsf85MPLcx7yoKFCAAYFDG90asS3okcGROxOhnZ/9zfOsfdJYAgEHKvIN9xadm99n90uURZ76jf/NMR%2BaTFFCEAIBBynyGfbZ372f%2B9r/h63nvUoAiBAAMWhtvBlx4fMTFV/Z1lCkb3xex9gs5a0MhAgAG7emxiMd/nLP2yaMRp79t%2Bv/cik9FzD%2B67%2BNMydZ/yfs%2BBShEAMAwtOlbAkfmDPY7BSbj0T8YCgEAw7DlO3nfZX/BByIWnzb1P3/ueyOOO2dw8xzJ85sjHvlBztpQjACAYdi3J2Is6ZW2c%2BZFrLp26n8%2B8%2Ba/sRsjYjxvfShEAMCwrL85Yu/OnLVXXhMxd8Hkf67frxGejl3bIjbemrM2FCQAYFh2PBOx%2BY6ctY8%2BJWLZFZP/uTWZj/7dErHr5bz1oRgBAMOU%2BXa7yS7tLzwu4pKPDWeWQ4xHjHn0D4ZJAMAw/eJnEU/%2BNGftU98cccqbJv7fl38iYv7i4c1zoEe%2BH/HCAzlrQ1ECAIYt8zG3CS/xj%2BQ%2B%2Bue9/zB0AgCGbfOdEdufzFn7wg9HLDrp0L9/7nsijj9/%2BPNERLz4UMTWf81ZGwoTADBs%2B3ZHrPtyztpzF0asvPrQv%2B/RPyhHAECG9V/uhUCGVdf13g2w3wnLIs5%2BV84su7dHbPhGztpQnACADNuf6n0UkOHYMyLOf/%2Bv/nr1DRExkjPLfbdF7HwpZ20oTgBAltTvB/jltwQuODbi0qvy5lh7Y97aUJwAgCxP/rT3WGCGMy6LWLqid/JfcGzODI/9W8Rz9%2BWsDQgASJX5%2BNuaz/nWPyhMAECmzXf0XhGcYfknI068MGftbY9EPPRPOWsDESEAINfenb0vCcowknj4j90UMb4vb31AAEC6sS/2vi64ij07Iu79WvYUUJ4AgGyvPBGx5TvZUwzP/X8b8drz2VNAeQIAmuCez2dPMDxu/oNGEADQBE/8JOLpsewpBu/x/4h4Zn32FEAIAGiOCr8ZV7rSAQ0nAKApNv1dxI7nsqcYnJcfj3joruwpgF8SANAUe16LuPer2VMMzrqbaj3tAA0nAKBJ1t0UMb43e4r%2B27szYv1XsqcADiAAoEm2PRax5e7sKfpv0%2B0RO57NngI4gACApunizYC%2B9Q8aRwBA0/z8RxHPbsieon/%2B778ifvG/2VMABxEA0ERd%2Bo25i1c0oAMEADTR/d%2BMeO2F7Clmb/uTEQ/8Y/YUwGEIAGii3a9GbPh69hSzt%2B5LEft2Z08BHIYAgKYa%2B0K7vzJ37668rzoGJiUAoKle2hrx8Hezp5i5B%2B6M2P5U9hTABAQANFmbb6Br8%2BxQgACAJnv0BxHPb8qeYvqe%2Bp%2BIJ/87ewrgCAQANF0bHwn02z80ngCAptt4a8SubdlTTN2rT0ds/vvsKYBJCABout2vRGy4JXuKqVt/c%2B/Lf4BGEwDQBmM3RsR49hST27en9%2Bw/0HgCANrghQcjtn4ve4rJPfjtiFeeyJ4CmAIBAG3Rhhvr1n4%2BewJgigQAtMXW7/WuBDTV02sjnvjP7CmAKRIA0BrjvdcDN1UbrlAArxMA0CYbvtF7KqBpdjwXsen27CmAaRAA0Ca7tkVsvC17ikPd%2B5WIPa9lTwFMgwCAtmnamwHH90as%2B2L2FMA0CQBom%2Bfvj3j0h9lT/MqWuyK2PZY9BTBNAgDaqEk33DVpFmDKBAC00cP/HPHS1uwpIp7dEPHzf8%2BeApgBAQBtNL6vGY8E%2Bu0fWksAQFtt%2BHrE7lfz1t/5YsT938pbH5gVAQBt9doLuSfge7%2BWGyDArAgAaLOsS/Dj%2ByLGbspZG%2BgLAQBtlnUT3sPfjXjp4eGvC/SNAIC2y7gK4OY/aD0BAG037BfxPL%2BpWS8iAmZEAEDbDftVvGtvjIjx4a0HDIQAgC4Y1pfx7NoWsfHWwa8DDNy87AGAPtjxXMRfL8qeAmgRVwAAoCABAAAFCQAAKEgAAEBBAgAAChIAAFCQAACAggQAABQkAACgIAEAAAUJAAAoSAAAQEECAAAKEgAAUJAAAICCBAAAFCQAAKAgAQAABQkAAChIAABAQQIAAAoSAABQkAAAgIIEAAAUJAAAoCABAAAFCQAAKEgAAEBBAgAACpqXPQAc0aM/jPjLkewpaKqXH/ffB8yQKwAAUJAAAICCBAAAFCQAAKAgAQAABQkAAChIAABAQQIAAAoSAABQkAAAgIIEAAAUJAAAoCABAAAFCYCGGv3x5dkjAPSF/ayZBAAAFCQAAKAgAQAABQkAAChIAABAQQKgwdw5C7Sdfay5BAAAFCQAAKAgAQAABQmAhvP5GdBW9q9mEwAAUJAAAICCBAAAFCQAWsDnaEDb2LeaTwAAQEECoCXUNNAW9qt2EAAAUJAAAICCBECLuKwGNJ19qj0EAAAUJABaRl0DTWV/ahcBAAAFCYAWUtlA09iX2kcAAEBBAqCl1DbQFPajdhIAAFCQAGgx1Q1ksw%2B1lwAAgIIEQMupbyCL/afdBEAHOAiBYbPvtJ8AAICCBEBHqHFgWOw33SAAOsRBCQyafaY7BEDHODiBQbG/dIsAAICCBEAHqXSg3%2Bwr3SMAOsrBCvSL/aSbBECHOWiB2bKPdJcA6DgHLzBT9o9uEwAFOIiB6bJvdJ8AKMLBDEyV/aIGAVCIgxqYjH2iDgFQjIMbmIj9oRYBUJCDHDiYfaEeAVCUgx3Yz35QkwAozEEP2AfqEgDFOfihLsd/bfOyByDf/k1g7O13JU8CDIMTPxGuAHAAmwJ0n%2BOc/QQAv8bmAN3l%2BOZAPgLgED4SgG5x4udwXAFgQjYNaD/HMRNxBYAjcjUA2smJn8kIAKZECEA7OPEzVQKAaREC0ExO/EyXAGBGhAA0gxM/MyUAmBUhADmc%2BJktAUBfHLgZiQEYDCd9%2BkkA0HeuCkB/OfEzCAKAgTl40xIEMDVO%2BAyDAGBoBAEcnhM%2BGQQAaSba9IQBXeVET5MIABrHJgkweL4LAAAKEgAAUJAAAICCBAAAFCQAAKAgAQAABQkAAChIAABAQQIAAAoSAABQkAAAgIIEAAAUJAAAoCABAAAFCQAAKEgAAEBBAgAAChIAAFCQAACAggQAABQkAACgIAEAAAUJAAAoSAAAQEECAAAKEgAAUJAAAICCBAAAFCQAAKAgAQAABQkAAChIAABAQQIAAAoSAABQkAAAgIIEAAAUJAAAoCABAAAFCQAAKEgAAEBBAgAAChIAAFCQAACAggQAABQkAACgIAEAAAUJAAAoSAAAQEECAAAKEgAAUJAAAICCBAAAFCQAAKAgAQAABQkAAChIAABAQQIAAAoSAABQkAAAgIIEAAAUJAAAoCABAAAFCQAAKEgAAEBBAgAAChIAAFCQAACAggQAABQkAACgIAEAAAUJAAAoSAAAQEECAAAKEgAAUJAAAICCBAAAFCQAAKAgAQAABQkAAChIAABAQQIAAAoSAABQkAAAgIIEAAAUJAAAoCABAAAFCQAAKEgAAEBBAgAAChIAAFCQAACAggQAABQkAACgIAEAAAUJAAAoSAAAQEECAAAKEgAAUJAAAICCBAAAFPT/erR7nOCjoxEAAAAASUVORK5CYII%3D%22%2C%20%22sizes%22%3A%20%22512x512%22%2C%20%22type%22%3A%20%22image/png%22%2C%20%22purpose%22%3A%20%22any%20maskable%22%7D%5D%7D" />
+<style>
+  :root{
+    color-scheme:light;
+    --slate:#2F4F4F; --slate-2:#3d6363;
+    --orange:#FF8C00; --orange-d:#e67e00;
+    --field:#FAF9F6; --line:#e2e8f0; --ink:#1e293b; --muted:#64748b;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--field);color:var(--ink);line-height:1.45}
+  header.app{background:var(--slate);color:#fff;padding:18px 20px;padding-top:calc(18px + env(safe-area-inset-top));position:sticky;top:0;z-index:20}
+  header.app .wrap{max-width:900px;margin:0 auto;display:flex;align-items:center;gap:14px}
+  .logo{width:40px;height:40px;border-radius:9px;background:var(--orange);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;color:#fff;flex-shrink:0}
+  header.app h1{font-size:20px;margin:0;letter-spacing:-.3px}
+  header.app p{margin:2px 0 0;font-size:13px;color:#c9d6d6}
+  .steps{max-width:900px;margin:14px auto 0;padding:0 16px;display:flex;gap:8px}
+  .steps .s{flex:1;font-size:12px;font-weight:600;color:var(--muted);text-align:center;padding:8px 4px;border-bottom:3px solid var(--line)}
+  .steps .s.active{color:var(--slate);border-bottom-color:var(--orange)}
+  .steps .s.done{color:var(--slate)}
+  main{max-width:900px;margin:0 auto;padding:22px 16px 60px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.04);padding:20px;margin-bottom:20px}
+  .card h2{color:var(--slate);font-size:18px;margin:0 0 4px}
+  .card .sub{color:var(--muted);font-size:13.5px;margin:0 0 16px}
+  label.fl{display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:600px){.grid2{grid-template-columns:1fr}}
+  input[type=text],select,textarea{width:100%;min-height:48px;border:2px solid #cbd5e1;border-radius:10px;padding:10px 14px;font-size:16px;color:var(--ink);background:#fff;font-family:inherit}
+  textarea{min-height:200px;resize:vertical;line-height:1.5;font-size:14px}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--orange);box-shadow:0 0 0 3px rgba(255,140,0,.18)}
+  .att-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  @media(max-width:600px){.att-grid{grid-template-columns:1fr}}
+  .att{border:2px solid var(--line);border-radius:10px;background:#fff;overflow:hidden;transition:border-color .15s}
+  .att.sel{border-color:var(--orange);background:#fff7ed}
+  .att button.pick{width:100%;min-height:48px;display:flex;align-items:center;gap:12px;padding:10px 14px;background:none;border:none;text-align:left;cursor:pointer;font-size:15px;font-weight:500;color:var(--ink);font-family:inherit}
+  .box{width:24px;height:24px;border-radius:7px;border:2px solid #cbd5e1;display:flex;align-items:center;justify-content:center;color:transparent;flex-shrink:0;font-size:14px;font-weight:800}
+  .att.sel .box{background:var(--orange);border-color:var(--orange);color:#fff}
+  .sigwrap{padding:0 14px 12px}
+  .sigwrap label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:600}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:52px;padding:0 22px;border-radius:12px;border:none;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;transition:background .15s,opacity .15s}
+  .btn-primary{background:var(--orange);color:#fff;box-shadow:0 2px 6px rgba(255,140,0,.35);width:100%}
+  .btn-primary:hover{background:var(--orange-d)}
+  .btn-primary:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+  .btn-ghost{background:#fff;color:var(--slate);border:2px solid var(--slate)}
+  .btn-ghost:hover{background:var(--slate);color:#fff}
+  .btn-slate{background:var(--slate);color:#fff}
+  .btn-slate:hover{background:var(--slate-2)}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row .btn{flex:1;min-width:150px}
+  .chip{display:inline-flex;align-items:center;gap:6px;background:#eef2f2;color:var(--slate);border:1px solid #d5dede;border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer}
+  .chip:hover{background:var(--slate);color:#fff}
+  .hidden{display:none!important}
+  .meta{color:var(--muted);font-size:13px}
+  .banner{background:#eef2f2;border:1px solid #d5dede;border-radius:10px;padding:12px 14px;font-size:13px;color:var(--slate);margin-bottom:16px}
+  /* --- confirm read-back (Screen 3) --- */
+  .rb-h{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#fff;background:var(--slate);padding:5px 11px;border-radius:7px;margin-bottom:4px}
+  .rb-h.orange{background:var(--orange);margin-top:20px}
+  ul.rb{margin:12px 0 0;padding-left:22px}
+  ul.rb li{margin-bottom:10px;font-size:15px;line-height:1.5}
+  ul.rb li b{color:var(--slate)}
+  ul.rb li em{color:var(--muted);font-style:normal;font-weight:600}
+  ul.rb .none{color:var(--muted);font-style:italic;list-style:none;margin-left:-18px}
+  .rbcheck{display:flex;align-items:flex-start;gap:12px;margin-top:20px;padding:14px;border:2px solid var(--line);border-radius:10px;font-size:15px;cursor:pointer}
+  .rbcheck input{width:22px;height:22px;min-height:22px;flex-shrink:0;accent-color:var(--orange);margin-top:1px}
+  /* --- mic --- */
+  .mic-wrap{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  #micBtn{min-width:210px}
+  #micBtn.rec{background:#c02626;animation:pulse 1.4s infinite}
+  #micBtn.rec:hover{background:#a81f1f}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(192,38,38,.5)}50%{box-shadow:0 0 0 8px rgba(192,38,38,0)}}
+  .interim{min-height:22px;color:#94a3b8;font-style:italic;font-size:14px;margin:-4px 0 12px}
+  /* --- toolbox-talk one-page form (Screen 3) --- */
+  .sheet{background:#fff;border:1px solid #cfd8d8;border-radius:6px;overflow:hidden}
+  .sheet-bar{background:var(--orange);color:#fff;padding:12px 18px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .sheet-bar .t{font-size:17px;font-weight:800;letter-spacing:1px}
+  .sheet-bar .ty{font-size:13px;font-weight:700;background:rgba(255,255,255,.2);padding:4px 12px;border-radius:999px}
+  .metaform{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border-bottom:2px solid var(--slate)}
+  @media(max-width:600px){.metaform{grid-template-columns:1fr 1fr}}
+  .metaform .mf{padding:9px 14px;border-right:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb}
+  .metaform .mf:last-child{border-right:none}
+  .metaform .mf label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:700;margin-bottom:2px}
+  .metaform .mf .v{font-size:14.5px;font-weight:600;color:var(--slate);min-height:20px;outline:none}
+  .metaform .mf .v:focus{background:#fff7ed}
+  .sect{padding:14px 18px;border-bottom:1px solid #eceff1}
+  .sect h3{margin:0 0 10px;font-size:12.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--slate);display:flex;align-items:center;gap:8px}
+  .sect h3::before{content:"";width:14px;height:14px;background:var(--orange);border-radius:3px;display:inline-block}
+  .ftable{width:100%;border-collapse:collapse;font-size:13.5px}
+  .ftable th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;padding:4px 8px;border-bottom:1px solid #e5e7eb}
+  .ftable td{padding:6px 8px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+  .ftable td[contenteditable]:focus{background:#fff7ed;outline:none;border-radius:4px}
+  .ftable td .tier{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:#eef2f2;color:var(--slate);border:1px solid #d5dede}
+  .rm{cursor:pointer;color:#cbd5e1;font-weight:800;padding:0 4px;user-select:none}
+  .rm:hover{color:#c02626}
+  .addrow{margin-top:8px;font-size:12.5px;color:var(--orange-d);font-weight:700;cursor:pointer;background:none;border:none;padding:2px 0}
+  .addrow:hover{text-decoration:underline}
+  .notes{width:100%;min-height:70px;border:1px dashed #cbd5e1;border-radius:8px;padding:8px 12px;font-size:13.5px;font-family:inherit;color:var(--ink);line-height:1.5}
+  .notes:focus{outline:none;border-color:var(--orange)}
+  .signgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  @media(max-width:600px){.signgrid{grid-template-columns:1fr}}
+  .signrow{display:flex;justify-content:space-between;gap:8px;border:1px solid #e5e7eb;border-radius:6px;padding:7px 12px;font-size:13.5px}
+  .signrow .nm{font-weight:600;color:var(--slate)}
+  .signrow .sg{color:var(--muted);font-style:italic;min-width:80px;text-align:right;outline:none}
+  .signrow .sg:focus{background:#fff7ed}
+  .disc{padding:12px 18px;font-size:11px;color:var(--muted);background:#fff7ed;line-height:1.5}
+  /* --- home / front door (iPhone app feel) --- */
+  body.home-mode{background:var(--slate)}
+  body.home-mode header.app,body.home-mode .steps,body.home-mode main{display:none!important}
+  #home{display:none}
+  body.home-mode #home{display:flex}
+  #home{min-height:100dvh;flex-direction:column;color:#fff;
+    padding:calc(env(safe-area-inset-top) + 8px) 24px calc(env(safe-area-inset-bottom) + 28px);
+    background:radial-gradient(120% 80% at 50% -10%, #3d6363 0%, var(--slate) 55%, #223b3b 100%)}
+  #home .home-top{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:6px}
+  #home .applogo{width:96px;height:96px;border-radius:24px;background:var(--orange);
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:52px;color:#fff;
+    box-shadow:0 12px 30px rgba(255,140,0,.4), inset 0 -4px 10px rgba(0,0,0,.15);margin-bottom:14px}
+  #home h1{font-size:34px;letter-spacing:-.5px;margin:0;font-weight:800}
+  #home .tag{font-size:16px;color:#c9d6d6;margin:2px 0 0;max-width:300px;line-height:1.4}
+  #home .home-actions{display:flex;flex-direction:column;gap:12px;margin-top:8px}
+  #home .btn-hero{background:var(--orange);color:#fff;min-height:56px;border-radius:16px;font-size:18px;font-weight:700;
+    border:none;cursor:pointer;box-shadow:0 6px 18px rgba(255,140,0,.4);display:flex;align-items:center;justify-content:center;gap:8px}
+  #home .btn-hero:active{transform:translateY(1px)}
+  #home .btn-second{background:rgba(255,255,255,.12);color:#fff;min-height:52px;border-radius:14px;font-size:16px;font-weight:600;
+    border:1px solid rgba(255,255,255,.18);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+  #home .btn-second:active{background:rgba(255,255,255,.2)}
+  #home .foot{text-align:center;font-size:12px;color:#9fb3b3;margin-top:20px;line-height:1.5}
+  .a2hs{display:none;margin-top:14px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);
+    border-radius:12px;padding:12px 14px;font-size:13.5px;color:#eaf2f2;line-height:1.5}
+  .a2hs b{color:#fff}
+  .a2hs .share-ic{display:inline-block;transform:translateY(2px)}
+  /* --- settings gear + modal --- */
+  .gear{background:rgba(255,255,255,.14);color:#fff;border:none;width:40px;height:40px;border-radius:9px;font-size:20px;cursor:pointer;flex-shrink:0;line-height:1}
+  .gear:hover{background:rgba(255,255,255,.28)}
+  .modal{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:24px 14px;overflow-y:auto}
+  .modal .panel{background:#fff;border-radius:14px;max-width:620px;width:100%;padding:22px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+  .modal h2{color:var(--slate);font-size:19px;margin:0 0 4px}
+  .modal .sub{color:var(--muted);font-size:13.5px;margin:0 0 18px}
+  .crewlist{display:flex;flex-direction:column;gap:8px;margin:6px 0 4px;max-height:260px;overflow-y:auto;padding-right:2px}
+  .crewrow{display:grid;grid-template-columns:1fr 96px 34px;gap:8px;align-items:center}
+  .crewrow input{min-height:42px;font-size:14px;padding:8px 10px}
+  .crewrow .del{cursor:pointer;color:#cbd5e1;font-weight:800;text-align:center;font-size:18px;user-select:none}
+  .crewrow .del:hover{color:#c02626}
+  .crewhead{display:grid;grid-template-columns:1fr 96px 34px;gap:8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:700;padding:0 2px}
+  @media(max-width:600px){.crewrow,.crewhead{grid-template-columns:1fr 76px 30px}}
+  .modal .actions{display:flex;gap:10px;margin-top:20px}
+  .modal .actions .btn{flex:1;min-height:48px}
+  /* --- v3: template picker (Setup screen) --- */
+  .tpl-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:600px){.tpl-grid{grid-template-columns:1fr}}
+  .tpl{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;
+    border:2px solid var(--line);border-radius:12px;background:#fff;padding:16px;cursor:pointer;font-family:inherit;transition:border-color .15s}
+  .tpl.sel{border-color:var(--orange);background:#fff7ed}
+  .tpl .tpl-ic{font-size:26px}
+  .tpl .tpl-t{font-size:16px;font-weight:800;color:var(--slate)}
+  .tpl .tpl-d{font-size:12.5px;color:var(--muted);line-height:1.4}
+  /* --- v3: meeting register --- */
+  .reg-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;margin-top:6px}
+  .reg-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border:2px solid var(--line);
+    border-radius:10px;padding:10px 14px;background:#fff;cursor:pointer;font-family:inherit;text-align:left;width:100%}
+  .reg-row:hover{border-color:var(--orange)}
+  .reg-row .rr-main{font-size:14.5px;font-weight:700;color:var(--slate)}
+  .reg-row .rr-sub{font-size:12px;color:var(--muted)}
+  .reg-badge{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;border-radius:999px;padding:3px 9px;flex-shrink:0}
+  .reg-badge.safety{background:#fff7ed;color:var(--orange-d);border:1px solid var(--orange)}
+  .reg-badge.general{background:#eef2f2;color:var(--slate);border:1px solid #d5dede}
+  .savefeed{font-size:13px;margin-top:8px;font-weight:600}
+  .savefeed.ok{color:#15803d}
+  .savefeed.err{color:#c02626}
+  /* --- v4: action register + carry-over + site history --- */
+  .ar-controls{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 4px}
+  .ar-controls input,.ar-controls select{min-height:40px;font-size:13.5px;padding:6px 10px;flex:1;min-width:110px}
+  .ar-group{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--slate);margin:12px 0 4px}
+  .ar-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;border:1px solid var(--line);border-radius:10px;padding:9px 12px;margin-bottom:6px;background:#fff}
+  .ar-row .ar-what{font-size:14px;font-weight:600;color:var(--ink)}
+  .ar-row .ar-meta{font-size:12px;color:var(--muted);margin-top:2px}
+  .ar-due{font-size:11.5px;font-weight:800;border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .ar-due.overdue{background:#fee2e2;color:#c02626;border:1px solid #c02626}
+  .ar-due.nodate{background:#fef3c7;color:#92400e;border:1px solid #d97706}
+  .ar-due.dated{background:#eef2f2;color:var(--slate);border:1px solid #d5dede}
+  .ar-btn{min-height:34px;border-radius:8px;border:2px solid var(--slate);background:#fff;color:var(--slate);font-weight:700;font-size:12.5px;padding:0 12px;cursor:pointer}
+  .ar-btn:hover{background:var(--slate);color:#fff}
+  .ar-btn.close-btn{border-color:#15803d;color:#15803d}
+  .ar-btn.close-btn:hover{background:#15803d;color:#fff}
+  .tabbar{display:flex;gap:6px;margin-bottom:10px}
+  .tabbar .tab{flex:1;min-height:40px;border-radius:9px;border:2px solid var(--line);background:#fff;font-weight:700;font-size:13.5px;color:var(--muted);cursor:pointer}
+  .tabbar .tab.on{border-color:var(--orange);color:var(--slate);background:#fff7ed}
+  #carryCard{border-color:var(--orange);background:#fff7ed}
+  #carryCard h2{display:flex;align-items:center;gap:8px}
+  @media print{
+    header.app,.steps,.noprint{display:none!important}
+    body{background:#fff}
+    main{padding:0;max-width:100%}
+    .card{box-shadow:none;border:none;padding:0;margin:0}
+    .sheet{border:1px solid #999}
+    .sheet-bar,.sect h3::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body class="home-mode">
+
+<!-- ============ HOME / FRONT DOOR ============ -->
+<section id="home">
+  <div class="home-top">
+    <div class="applogo">M</div>
+    <h1>Minute Man</h1>
+    <p class="tag">Speak the toolbox talk — walk away with a signed record.</p>
+  </div>
+  <div class="home-actions">
+    <button class="btn-hero" id="homeNew">＋ New Meeting</button>
+    <button class="btn-second" id="homeActions" style="display:none">☑ Action Register</button>
+    <button class="btn-second" id="homeRegister" style="display:none">🗂 Meeting Register</button>
+    <button class="btn-second" id="homePrev" style="display:none">▶ Previous Meeting</button>
+    <button class="btn-second" id="homeSettings">⚙ Crew &amp; Settings</button>
+    <div class="a2hs" id="a2hs"></div>
+    <p class="foot">Health &amp; safety minutes for NZ construction.<br/>AI decision-support — a responsible person must review &amp; sign off.<br/><span id="appVer" style="opacity:.55;font-size:.85em"></span></p>
+  </div>
+</section>
+
+<header class="app">
+  <div class="wrap">
+    <div class="logo" id="homeLogo" title="Home" style="cursor:pointer">M</div>
+    <div style="flex:1">
+      <h1>Minute Man</h1>
+      <p>Speak the toolbox talk — walk away with a signed record.</p>
+    </div>
+    <button class="gear noprint" id="openSettings" title="Settings — crew &amp; defaults" aria-label="Settings">⚙</button>
+  </div>
+</header>
+
+<div class="steps">
+  <div class="s active" id="st1">1 · Setup</div>
+  <div class="s" id="st2">2 · Capture</div>
+  <div class="s" id="st3">3 · Confirm</div>
+  <div class="s" id="st4">4 · Record</div>
+</div>
+
+<main>
+  <!-- ============ SCREEN 1: SETUP ============ -->
+  <section id="screen1">
+    <!-- v3: template picker — drives which sections show on Confirm & Record -->
+    <div class="card">
+      <h2>Meeting Template</h2>
+      <p class="sub">Pick the kind of record to build. This decides which sections appear on the Confirm and Record screens.</p>
+      <div class="tpl-grid">
+        <button type="button" class="tpl sel" id="tplSafety">
+          <span class="tpl-ic">🦺</span>
+          <span class="tpl-t">Safety / Toolbox Talk</span>
+          <span class="tpl-d">Incidents reviewed, hazards &amp; HSWA controls, actions, decisions, minutes summary.</span>
+        </button>
+        <button type="button" class="tpl" id="tplGeneral">
+          <span class="tpl-ic">📋</span>
+          <span class="tpl-t">General Meeting</span>
+          <span class="tpl-d">Summary of the discussion, actions with owners, decisions. No hazard analysis.</span>
+        </button>
+      </div>
+      <!-- v5: uploaded templates appear here; upload adds a new one -->
+      <div class="tpl-grid" id="tplUploads" style="margin-top:12px"></div>
+      <div class="row noprint" id="tplUploadRow" style="margin-top:12px;display:none">
+        <button type="button" class="chip" id="tplUploadBtn">📄 Upload template…</button>
+        <span class="meta" id="tplUploadStatus"></span>
+        <input type="file" id="tplFile" accept=".xlsx,.csv,.xls" class="hidden" />
+      </div>
+      <!-- v5: mapping review card (one screen, plain language) -->
+      <div class="card hidden" id="mapCard" style="margin-top:12px;border-color:var(--orange)">
+        <h2>How I read your template</h2>
+        <p class="sub">Check each sheet was understood correctly — fix any that weren't, then you're done. Your spreadsheet's rows were treated as examples only; nothing from them is stored.</p>
+        <div id="mapList"></div>
+        <p class="savefeed" id="mapStatus"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Meeting Details</h2>
+      <p class="sub">Set up the record before capturing the discussion.</p>
+      <div class="grid2">
+        <div>
+          <label class="fl" for="meetingType" id="meetingTypeLabel">Meeting Type</label>
+          <select id="meetingType">
+            <option>Toolbox Talk</option>
+            <option>Pre-start</option>
+            <option>Site Progress</option>
+            <option>H&amp;S Review</option>
+          </select>
+          <input type="text" id="meetingTypeText" class="hidden" placeholder="e.g. Project Catch-up" />
+        </div>
+        <div>
+          <label class="fl" for="siteName">Site / Job Name</label>
+          <input type="text" id="siteName" placeholder="e.g. Riverside Fabrication" />
+          <button class="chip noprint" id="geoBtn" type="button" style="margin-top:8px">📍 Use my location</button>
+          <span class="meta" id="geoStatus" style="margin-left:8px"></span>
+        </div>
+      </div>
+      <div class="grid2" style="margin-top:16px">
+        <div>
+          <label class="fl" for="meetingDate">Date</label>
+          <input type="text" id="meetingDate" />
+        </div>
+        <div>
+          <label class="fl" for="ledBy">Led by</label>
+          <input type="text" id="ledBy" placeholder="e.g. Shane Adams" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:1px">
+        <h2>Attendance Record</h2>
+        <span class="meta"><span id="selCount">0</span> selected</span>
+      </div>
+      <p class="sub">Tap a name to add them, then capture their signature. Name and signature stay paired.</p>
+      <div class="att-grid" id="attGrid"></div>
+    </div>
+
+    <!-- v4: carry-over — open actions from previous meetings at this site -->
+    <div class="card hidden" id="carryCard">
+      <h2>⚠ <span id="carryCount">0</span> open actions from previous meetings at this site</h2>
+      <p class="sub">Close the ones that are already done — the rest will be read out at Confirm and appear on the record as “Outstanding Actions (carried over)”.</p>
+      <div id="carryList"></div>
+    </div>
+
+    <button class="btn btn-primary" id="toCapture" disabled>Start Capturing Minutes →</button>
+  </section>
+
+  <!-- ============ SCREEN 2: CAPTURE ============ -->
+  <section id="screen2" class="hidden">
+    <div class="card">
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <h2>Capture the Discussion</h2>
+        <button class="chip noprint" id="backTo1">← Edit setup</button>
+      </div>
+      <p class="sub">Tap record and just run the talk — words appear below as you speak. Or paste notes / load a demo.</p>
+
+      <div class="mic-wrap">
+        <button class="btn btn-slate" id="micBtn"><span id="micDot">●</span> Start recording</button>
+        <span class="meta" id="micStatus"></span>
+      </div>
+      <div class="interim" id="interim"></div>
+
+      <div class="row" style="margin-bottom:14px">
+        <button class="chip demo-safety" onclick="loadDemo(1)">▶ Demo 1 — Toolbox Talk (wet weather)</button>
+        <button class="chip demo-safety" onclick="loadDemo(2)">▶ Demo 2 — Pre-start (hot work / grinder)</button>
+        <button class="chip demo-general hidden" onclick="loadDemo(3)">▶ Demo — General Meeting (project catch-up)</button>
+      </div>
+
+      <label class="fl" for="transcript">Transcript</label>
+      <textarea id="transcript" placeholder="Your spoken words will appear here… or type / paste."></textarea>
+    </div>
+    <p class="meta" id="genStatus" style="margin:0 0 10px"></p>
+    <button class="btn btn-primary" id="genBtn" disabled>Review &amp; Confirm →</button>
+  </section>
+
+  <!-- ============ SCREEN 3: CONFIRM (READ-BACK) ============ -->
+  <section id="screen3" class="hidden">
+    <div class="card noprint">
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <h2>Confirm the Record</h2>
+        <button class="chip" id="backToCapture">← Back to transcript</button>
+      </div>
+      <p class="sub">Read this back to the group before you build the record. If someone remembers something that wasn't captured, add it below or go back to the transcript. Nothing is exported until the team agrees it's complete.</p>
+      <div class="banner"><b>Read aloud:</b> “Here's what I've got from today's talk — sing out if I've missed anything.”</div>
+    </div>
+
+    <div class="card">
+      <!-- v3: read-back sections are built per template —
+           safety: incidents → hazards → actions → decisions → summary
+           general: summary → actions → decisions -->
+      <div id="rbSections"></div>
+
+      <p class="meta" id="rbAtt" style="margin-top:14px"></p>
+
+      <label class="fl" for="rbAddNote" style="margin-top:18px">Anything missed? Add it here</label>
+      <textarea id="rbAddNote" style="min-height:70px" placeholder="e.g. someone raised the reversing camera on the forklift is out…"></textarea>
+
+      <label class="rbcheck"><input type="checkbox" id="rbConfirm"/><span>I've read this back and the team confirms the record is complete.</span></label>
+    </div>
+
+    <button class="btn btn-primary" id="toRecord" disabled>Looks right — build the record →</button>
+  </section>
+
+  <!-- ============ SCREEN 4: TOOLBOX-TALK RECORD ============ -->
+  <section id="screen4" class="hidden">
+    <div class="card noprint">
+      <div style="display:flex;align-items:baseline;justify-content:space-between">
+        <h2>Your Toolbox-Talk Record</h2>
+        <button class="chip" id="backTo2">← Back to confirm</button>
+      </div>
+      <p class="sub">Tap any field to edit before you sign off. Every field is editable — tidy it, then export.</p>
+      <div class="row">
+        <button class="btn btn-slate" onclick="window.print()">⤓ Download / Print PDF</button>
+        <button class="btn btn-ghost" id="csvBtn">⤓ Export to CSV / Excel</button>
+        <button class="btn btn-ghost" id="shareBtn">⤴ Share / Send</button>
+        <button class="btn btn-primary" id="saveRegBtn" style="width:auto">🗂 Save to Register</button>
+      </div>
+      <p class="savefeed" id="saveRegStatus"></p>
+      <p class="meta hidden" id="saveRegOffline">Save to Register needs the Minute Man server — this offline demo keeps only a local snapshot for “Previous Meeting” playback.</p>
+    </div>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <div class="sheet" id="sheet">
+        <div class="sheet-bar">
+          <span class="t">TOOLBOX TALK RECORD</span>
+          <span class="ty" id="shType">Toolbox Talk</span>
+        </div>
+        <div class="metaform">
+          <div class="mf"><label>Site / Job</label><div class="v" contenteditable id="shSite">—</div></div>
+          <div class="mf"><label>Date</label><div class="v" contenteditable id="shDate">—</div></div>
+          <div class="mf"><label>Led by</label><div class="v" contenteditable id="shLed">—</div></div>
+          <div class="mf"><label>Present</label><div class="v" id="shCount">0</div></div>
+        </div>
+
+        <div class="sect" id="incSect">
+          <h3>Incidents Reviewed</h3>
+          <table class="ftable" id="incTable">
+            <thead><tr><th style="width:40%">Description</th><th style="width:18%">Severity</th><th style="width:38%">Review outcome</th><th style="width:16px"></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <button class="addrow" onclick="addInc()">+ Add incident</button>
+        </div>
+
+        <div class="sect" id="hazSect">
+          <h3>Hazards &amp; Controls Discussed</h3>
+          <table class="ftable" id="hazTable">
+            <thead><tr><th style="width:28%">Hazard</th><th style="width:30%">Control</th><th style="width:18%">Tier</th><th style="width:22%">HSWA note</th><th style="width:16px"></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <button class="addrow" onclick="addHaz()">+ Add hazard</button>
+        </div>
+
+        <div class="sect" id="actSect">
+          <h3>Actions Agreed</h3>
+          <table class="ftable" id="actTable">
+            <thead><tr><th style="width:24%">Who</th><th style="width:52%">What</th><th style="width:24%">By when</th><th style="width:16px"></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <button class="addrow" onclick="addAct()">+ Add action</button>
+        </div>
+
+        <div class="sect" id="carrySect">
+          <h3>Outstanding Actions (carried over)</h3>
+          <table class="ftable" id="carryTable">
+            <thead><tr><th style="width:22%">Who</th><th style="width:42%">What</th><th style="width:18%">Raised at</th><th style="width:18%"></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="sect" id="decSect">
+          <h3>Decisions Made</h3>
+          <table class="ftable" id="decTable">
+            <thead><tr><th>Decision</th><th style="width:16px"></th></tr></thead>
+            <tbody></tbody>
+          </table>
+          <button class="addrow" onclick="addDec()">+ Add decision</button>
+        </div>
+
+        <div class="sect" id="sumSect">
+          <h3 id="sumHeading">Minutes Summary</h3>
+          <div class="notes" contenteditable id="shSummary"></div>
+        </div>
+
+        <div class="sect hidden" id="customSect">
+          <h3 id="customHeading">Custom Sections</h3>
+          <div id="customBody"></div>
+        </div>
+
+        <div class="sect" id="notesSect">
+          <h3>Discussion Notes</h3>
+          <div class="notes" contenteditable id="shNotes"></div>
+        </div>
+
+        <div class="sect" id="attSect">
+          <h3 id="attHeading">Attendance &amp; Sign-off</h3>
+          <div class="signgrid" id="signGrid"></div>
+        </div>
+
+        <div class="disc">
+          AI-generated decision support from a verbal transcript — not a certified WorkSafe NZ document. A responsible person must review, correct, and sign off this record before it is filed or distributed.
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============ SETTINGS MODAL ============ -->
+<div class="modal hidden" id="settingsModal">
+  <div class="panel">
+    <h2>Settings — crew &amp; defaults</h2>
+    <p class="sub">Saved on this device so you don't re-type them each time. These pre-fill the Setup screen and the attendance list.</p>
+
+    <div class="grid2">
+      <div>
+        <label class="fl" for="setSite">Default site / company</label>
+        <input type="text" id="setSite" placeholder="e.g. Riverside Fabrication" />
+      </div>
+      <div>
+        <label class="fl" for="setLed">Default leader (Led by)</label>
+        <input type="text" id="setLed" placeholder="e.g. Shane Adams" />
+      </div>
+    </div>
+    <div style="margin-top:14px">
+      <label class="fl" for="setType">Default meeting type</label>
+      <select id="setType">
+        <option>Toolbox Talk</option>
+        <option>Pre-start</option>
+        <option>Site Progress</option>
+        <option>H&amp;S Review</option>
+      </select>
+    </div>
+
+    <label class="fl" style="margin-top:18px">Crew list</label>
+    <div class="crewhead"><span>Name</span><span>Initials</span><span></span></div>
+    <div class="crewlist" id="crewList"></div>
+    <button class="addrow" id="addCrew" type="button">+ Add crew member</button>
+
+    <div class="actions">
+      <button class="btn btn-ghost" id="cancelSettings" type="button">Cancel</button>
+      <button class="btn btn-primary" id="saveSettings" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PREVIOUS MEETING PLAYBACK MODAL ============ -->
+<div class="modal hidden" id="playbackModal">
+  <div class="panel">
+    <h2>Previous Meeting</h2>
+    <p class="sub" id="pbMeta">—</p>
+    <p class="meta" id="pbStatus" style="margin-top:14px">Ready.</p>
+    <div class="actions">
+      <button class="btn btn-ghost" id="pbStop" type="button" style="display:none">Stop</button>
+      <button class="btn btn-primary" id="pbNew" type="button">New Meeting →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MEETING REGISTER MODAL (v3; v4 adds search/archive/site history) ============ -->
+<div class="modal hidden" id="registerModal">
+  <div class="panel">
+    <h2>Meeting Register</h2>
+    <div class="tabbar">
+      <button type="button" class="tab on" id="regTabMeetings">Meetings</button>
+      <button type="button" class="tab" id="regTabHistory">Site history</button>
+    </div>
+    <div id="regMeetingsPane">
+      <div class="ar-controls">
+        <input type="text" id="regSearch" placeholder="Search site / type…" />
+        <input type="text" id="regFrom" placeholder="From (YYYY-MM-DD)" style="max-width:150px" />
+        <input type="text" id="regTo" placeholder="To (YYYY-MM-DD)" style="max-width:150px" />
+      </div>
+      <label class="meta" style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <input type="checkbox" id="regArchived" style="width:16px;height:16px" /> Show archived
+      </label>
+      <p class="sub" id="regStatus">Loading saved meetings…</p>
+      <div class="reg-list" id="regList"></div>
+      <button class="addrow" id="regMore" type="button" style="display:none">Load more…</button>
+    </div>
+    <div id="regHistoryPane" class="hidden">
+      <div class="ar-controls">
+        <input type="text" id="histSite" list="histSiteList" placeholder="Site name…" />
+        <datalist id="histSiteList"></datalist>
+        <button type="button" class="ar-btn" id="histGo" style="min-height:40px">Show history</button>
+      </div>
+      <p class="sub" id="histStatus">Pick a site to see its meetings, recurring hazards and incidents.</p>
+      <div id="histBody" style="max-height:300px;overflow-y:auto;font-size:13.5px;line-height:1.5"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-ghost" id="regClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ACTION REGISTER MODAL (v4) ============ -->
+<div class="modal hidden" id="actionRegModal">
+  <div class="panel">
+    <h2>Action Register</h2>
+    <p class="sub">Every action across every meeting — who owes what. Overdue first.</p>
+    <div class="ar-controls">
+      <select id="arStatus">
+        <option value="open" selected>Open</option>
+        <option value="closed">Closed</option>
+        <option value="all">All</option>
+      </select>
+      <input type="text" id="arSite" list="arSiteList" placeholder="Site…" />
+      <datalist id="arSiteList"></datalist>
+      <input type="text" id="arWho" placeholder="Person…" />
+      <input type="text" id="arSearch" placeholder="Search actions…" />
+    </div>
+    <p class="sub" id="arStatusLine">Loading…</p>
+    <div id="arList" style="max-height:320px;overflow-y:auto"></div>
+    <div class="actions" style="flex-wrap:wrap">
+      <button class="btn btn-ghost" id="arExport" type="button">⤓ Export this list (Excel)</button>
+      <button class="btn btn-primary" id="arClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SAVED MEETING VIEW MODAL (v3) ============ -->
+<div class="modal hidden" id="meetingViewModal">
+  <div class="panel">
+    <h2 id="mvTitle">Meeting</h2>
+    <p class="sub" id="mvMeta">—</p>
+    <div id="mvBody" style="max-height:300px;overflow-y:auto;font-size:14px;line-height:1.5"></div>
+    <p class="meta" id="mvStatus" style="margin-top:10px"></p>
+    <div class="actions" style="flex-wrap:wrap">
+      <button class="btn btn-ghost" id="mvPlay" type="button">▶ Play back</button>
+      <button class="btn btn-ghost" id="mvPdf" type="button">⤓ PDF</button>
+      <button class="btn btn-ghost" id="mvXlsx" type="button">⤓ Excel</button>
+      <button class="btn btn-primary" id="mvClose" type="button">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// BACKEND CONFIG
+// Leave this empty ("") to run fully offline: the two built-in demos work and
+// export is a browser-built CSV + print — no server needed (this is what the
+// static Cloudflare demo uses).
+// Set it to your deployed backend's base URL (no trailing slash), e.g.
+//   const BACKEND_URL = "https://minute-man-api.onrender.com";
+// …and the app will send real transcripts to /api/minutes and download the
+// branded Excel from /export/excel. If the backend can't be reached it quietly
+// falls back to the offline behaviour and shows a small notice.
+// Three possible values:
+//   ""            → fully offline (the two demos only) — used by the static Cloudflare demo.
+//   "SAME_ORIGIN" → the backend is serving this very page (one Render service does both).
+//                   Calls go to /api/minutes on the same address — no CORS, nothing to edit.
+//   "https://..." → a separate backend at that URL (e.g. Cloudflare page + Render backend).
+const BACKEND_URL = "SAME_ORIGIN";
+const APP_VERSION = "5.0";
+const backendConfigured = () => BACKEND_URL !== "";
+const apiBase = () => BACKEND_URL === "SAME_ORIGIN" ? "" : BACKEND_URL.replace(/\/+$/, "");
+// Wake the backend the moment the page opens (free hosting sleeps when idle,
+// and the first request after a sleep can take ~1 min). Fire-and-forget: by
+// the time the leader finishes Setup, the server is already awake, so
+// "Generate" responds fast instead of hanging on a cold start.
+if (backendConfigured()) {
+  try { fetch(apiBase() + '/api/health', { cache: 'no-store' }).catch(()=>{}); } catch(_){}
+}
+// ---------------------------------------------------------------------------
+const DEFAULT_CREW = ["Shane Adams","Pony Kenatale","Eddie M","Brian Smith","Militoni Tuakalau","Paula T","Edward Peckham","Nelsoni Tuione","Lorima","Benjamin Gimenez","Norma Aloa","Jake Wilson","Terence Jorgenson","Peter Duke","Frances Baleisasa","Fauta Iene","Jass Singh","John Smith","Frances Sanailo"].map(n=>({name:n,initials:""}));
+const state = { selected:new Set(), signatures:{}, template:"safety", meetingType:"Toolbox Talk", siteName:"", date:"", ledBy:"", decisions:[], usingBackend:false, extraction:null, lastSavedId:null,
+  carriedOver:[],      // v4: open actions from previous meetings at this site (register rows)
+  providerUsed:"",     // v4: echoed by /api/minutes
+  closedByName:"",     // v4: remembered once per session for the Close flow
+  templateId:null,     // v5: templates-table row driving this meeting (uploads)
+  templateSpec:null }; // v5: its TemplateSpec (labels for custom rendering)
+
+// ---------------------------------------------------------------------------
+// v4: write requests go through apiFetch, which handles the OPTIONAL register
+// protection (env MM_API_KEY on the server). Off by default — with no key set
+// this behaves exactly like plain fetch. On the first 401 the user is asked
+// once for the access key; it's remembered in localStorage and retried.
+// ---------------------------------------------------------------------------
+const API_KEY_STORE = 'minuteman_api_key_v1';
+function storedApiKey(){ try{ return localStorage.getItem(API_KEY_STORE)||''; }catch(_){ return ''; } }
+async function apiFetch(url, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers);
+  const key = storedApiKey();
+  if(key) opts.headers['X-API-Key'] = key;
+  let res = await fetch(url, opts);
+  if(res.status === 401){
+    const entered = window.prompt('This register is protected — enter the access key:');
+    if(entered){
+      try{ localStorage.setItem(API_KEY_STORE, entered.trim()); }catch(_){}
+      opts.headers['X-API-Key'] = entered.trim();
+      res = await fetch(url, opts);
+    }
+  }
+  return res;
+}
+
+// --- Saved settings (per-device, localStorage) -----------------------------
+const SETTINGS_KEY = "minuteman_settings_v1";
+let settings = { crew:DEFAULT_CREW.slice(), defaultSite:"", defaultLed:"", defaultType:"Toolbox Talk" };
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if(raw){
+      const s = JSON.parse(raw);
+      if(Array.isArray(s.crew) && s.crew.length) settings.crew = s.crew.map(c=>({name:(c.name||"").trim(), initials:(c.initials||"").trim()})).filter(c=>c.name);
+      settings.defaultSite = s.defaultSite||"";
+      settings.defaultLed  = s.defaultLed||"";
+      settings.defaultType = s.defaultType||"Toolbox Talk";
+    }
+  }catch(_){ /* storage blocked (e.g. private mode) — fall back to defaults */ }
+}
+function saveSettings(){
+  try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(_){}
+}
+// initials lookup for pre-filling signatures
+function initialsFor(name){ const c = settings.crew.find(c=>c.name===name); return c && c.initials ? c.initials : ""; }
+loadSettings();
+
+// --- Backend helpers (only used when BACKEND_URL is set) -------------------
+// POST the transcript + meeting metadata + selected attendance to /api/minutes.
+async function fetchMinutesFromBackend(){
+  const attendance = Array.from(state.selected).map(n=>({name:n, signature:state.signatures[n]||''}));
+  const body = {
+    transcript: ta.value.trim(),
+    meeting_type: state.meetingType,
+    site_name: state.siteName,
+    meeting_date: state.date,
+    led_by: state.ledBy,
+    template: state.template,   // v3: "safety" | "general"
+    template_id: state.templateId,  // v5: uploaded template row (null for builtins)
+    attendance
+  };
+  const res = await apiFetch(apiBase()+'/api/minutes',{
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+  });
+  if(!res.ok){
+    let detail=''; try{ const j=await res.json(); detail=j.detail||''; }catch(_){}
+    throw new Error(res.status+(detail?' — '+String(detail).slice(0,160):''));
+  }
+  return res.json();
+}
+// Map the backend's field names (control_tier / compliance_note / by_when) onto
+// the internal shape the read-back + record screens already understand
+// (tier / note / when). Do the mapping HERE, at the fetch boundary.
+function normalizeMinutes(m){
+  return {
+    template: m.template || state.template,
+    type: m.meeting_type || state.meetingType,
+    site: m.site_name || state.siteName,
+    led: state.ledBy,
+    incidents: (m.incidents||[]).map(i=>({description:i.description, severity:i.severity||'not stated', outcome:i.outcome||''})),
+    hazards: (m.hazards||[]).map(h=>({hazard:h.hazard, control:h.control, tier:h.control_tier, note:h.compliance_note, custom:h.custom||null})),
+    actions: (m.actions||[]).map(a=>({who:a.who, what:a.what, when:a.by_when, custom:a.custom||null})),
+    decisions: m.decisions||[],
+    summary: m.summary||'',
+    topics: m.topics||[],
+    customSections: m.custom_sections||{}   // v5
+  };
+}
+// v5: label lookups from the selected template's spec, for generic rendering
+function customColLabels(kind){
+  const spec=state.templateSpec; if(!spec) return {};
+  const s=(spec.sections||[]).find(x=>x.kind===kind); if(!s) return {};
+  const out={};
+  (s.columns||[]).forEach(c=>{ if(!c.maps_to && c.key) out[c.key]=c.label; });
+  return out;
+}
+function customSectionDefs(){
+  const spec=state.templateSpec; if(!spec) return [];
+  return (spec.sections||[]).filter(s=>s.kind==='custom');
+}
+function snakeTitle(t){ return String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'custom'; }
+function customPairsHtml(custom, kind){
+  if(!custom) return '';
+  const labels=customColLabels(kind);
+  const bits=Object.entries(custom).filter(([,v])=>v!=null&&v!=='')
+    .map(([k,v])=>escapeHtml(labels[k]||k)+': '+escapeHtml(v));
+  return bits.length?' <em>('+bits.join(' · ')+')</em>':'';
+}
+
+(function(){ const d=new Date(); const nz=d.toLocaleDateString('en-NZ',{day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('meetingDate').value=nz; state.date=nz; })();
+
+const DEMOS = {
+1:{ type:"Toolbox Talk", site:"Yard & Fabrication Shed", led:"Shane Adams",
+speakers:["Shane Adams","Pony Kenatale","Eddie M","Brian Smith","Militoni Tuakalau","Paula T","Edward Peckham"],
+text:`Shane: cold one this morning. It's been bucketing down all night so the whole laydown area out back is mud soup. Pony can you talk to that.
+Pony: anyone walking out to the container yard, watch ya step, it's slippery as, two blokes nearly went over before 7am. Rope it off or chuck crushed metal on the worst bit near the gate.
+Shane: do that today, get Eddie onto it.
+Eddie: I'll grab the loader after smoko, do the roller door walkway first.
+Shane: and proper wet weather gear from stores, not just a hi-vis vest, we had a bloke off sick last week.
+Brian: the drains out front were overflowing yesterday, water over the kerb by the workshop door.
+Shane: Militoni check the grates, clear them this morning before it rains again this arvo.
+Paula: the fabrication shed roof is still leaking over bay 3, floor's wet with extension leads about.
+Shane: Edward tape off bay 3 so nobody's rolling gear through a puddle with power leads. Watch your footing, slow down, sign the sheet.`,
+hazards:[
+ {hazard:"Slippery muddy laydown / container yard (two near-falls before 7am)",control:"Rope off worst area + crushed metal near gate; loader seals roller-door walkway first",tier:"Isolate/Eng.",note:"HSWA s36 safe access — barrier + surface before relying on care"},
+ {hazard:"Soaked / cold exposure — only hi-vis vests (one off sick last week)",control:"Proper wet-weather gear issued from stores",tier:"PPE",note:"PPE last line — supply suitable gear"},
+ {hazard:"Overflowing blocked drains at workshop door",control:"Clear grates this morning before afternoon rain",tier:"Eng./Maint.",note:"Manage foreseeable environmental hazard"},
+ {hazard:"Leaking Bay 3 roof — wet floor with power leads",control:"Barricade Bay 3; keep extension leads off wet ground",tier:"Isolate+Admin",note:"Slip + electrical — leads elevated, on RCD"}
+],
+actions:[
+ {who:"Eddie M",what:"Crushed metal on worst slip areas w/ loader — roller-door walkway first",when:"Today, after smoko"},
+ {who:"Militoni Tuakalau",what:"Clear blocked drain grates at workshop door",when:"This morning"},
+ {who:"Edward Peckham",what:"Tape off Bay 3 under leaking roof; keep leads off ground",when:"Now"}
+]},
+2:{ type:"Pre-start", site:"Workshop / Riverside Job", led:"Terence Jorgenson",
+speakers:["Terence Jorgenson","Peter Duke","Frances Baleisasa","Fauta Iene","Jass Singh","Jake Wilson","John Smith","Norma Aloa","Lorima"],
+text:`Terence: first up the hot work permit for the tank job, welding the old fuel tank out back. Peter you're on that?
+Peter: yeah, permit's signed, fire watch sorted, Frances B on the extinguisher.
+Frances B: all good, done the fire watch card before, just remind me on the thirty minute after-check.
+Terence: I'll set a timer. Fauta you had something on the grinder.
+Fauta: the bench grinder near bay two, guard's been loose a week, rattling, I tagged it yesterday but someone pulled the tag and kept using it. Someone's gonna lose a finger.
+Terence: it's tagged out, nobody touch it. Jake get maintenance onto that guard today, not next week.
+Jake: I'll call them now, hopefully this arvo.
+Terence: last thing, Riverside steel got pushed back again, John tell the site super Thursday not tomorrow.
+John: already flagged, Thursday's the date. Norma reckons we pull guys off the smaller job to hit tomorrow.
+Terence: nah don't stretch everyone thin, Thursday's fine. Lorima make sure the fire watch gear's at the tank before Peter starts, not after.`,
+hazards:[
+ {hazard:"Hot work — welding old fuel tank (fire/explosion)",control:"Signed hot-work permit; fire watch (Frances B) + extinguisher; 30-min after-check timer",tier:"Admin+PPE",note:"Hot-work permit — verify tank gas-free before arc"},
+ {hazard:"Bench grinder (bay 2) loose guard — tag pulled & used",control:"Tagged out, no use until maintenance repairs guard",tier:"Isolate (LOTO)",note:"Guarding duty — defeating a tag is a serious breach"},
+ {hazard:"Schedule pressure on delayed Riverside job",control:"Accept Thursday date; don't pull crew to rush tomorrow",tier:"Admin",note:"Manage rushing/fatigue as a risk factor"}
+],
+actions:[
+ {who:"Jake Wilson",what:"Maintenance to repair bench-grinder guard (bay 2); stays tagged out until done",when:"Today"},
+ {who:"John Smith",what:"Tell site super Riverside steel is Thursday not tomorrow",when:"Done — confirm"},
+ {who:"Lorima",what:"Fire-watch gear at the tank before Peter starts welding",when:"Before hot work"},
+ {who:"Terence Jorgenson",what:"Set 30-min fire-watch after-check timer",when:"During welding"}
+]},
+// v3: the one general-meeting demo (transcript + canned extraction, offline-friendly)
+3:{ template:"general", type:"Project Catch-up", site:"Office / Riverside Job", led:"Jason George",
+speakers:["Jason George","Christina Fa'aui","Ben Gaston","Andrew Kelly"],
+text:`Jason: right, quick catch-up on Riverside. Steel delivery got pushed to Thursday so the programme moves a week. Christina can you update the schedule and send it round.
+Christina: yep, I'll have the revised schedule out by Friday.
+Ben: budget's tracking okay but the crane hire quote came in higher than we allowed, about eight percent over.
+Jason: get a second quote before we commit. Ben, that's yours, this week.
+Ben: will do.
+Andrew: the client asked about the variation for the extra mezzanine steel. We need that confirmed in writing before we order material.
+Jason: agreed. Andrew, confirm the variation scope with the client in writing before Friday. And on staffing, we said we'd take on an apprentice for the workshop.
+Christina: advert's drafted, just needs sign-off.
+Jason: sign-off's done, run the ad. Okay, that's everything.`,
+general:{
+  summary:"The catch-up covered the Riverside programme, budget, a client variation and staffing. The steel delivery has moved to Thursday, shifting the programme by a week; a revised schedule will be circulated by Friday. The crane-hire quote came in about eight percent over allowance, so a second quote will be sought before committing.\n\nThe client's variation for the extra mezzanine steel must be confirmed in writing before material is ordered. The apprentice advert was approved and will be run.",
+  topics:["Riverside programme / steel delivery","Budget — crane hire quote","Client variation (mezzanine steel)","Staffing — apprentice"],
+  actions:[
+    {who:"Christina Fa'aui",what:"Update the Riverside schedule and circulate it",when:"Friday"},
+    {who:"Ben Gaston",what:"Get a second crane-hire quote before committing",when:"This week"},
+    {who:"Andrew Kelly",what:"Confirm the mezzanine variation scope with the client in writing",when:"Before Friday"}
+  ],
+  decisions:["Programme moves a week — steel delivery now Thursday.","Seek a second crane-hire quote before committing.","Apprentice advert approved — run the ad."]
+}}
+};
+
+// ---------- Screen 1: attendees ----------
+const attGrid=document.getElementById('attGrid');
+// Build one attendee card. Used to render the saved crew, and on the fly for
+// any demo speaker who isn't in the current crew list.
+function addAttendeeCard(name){
+  if(attGrid.querySelector(`.att[data-name="${CSS.escape(name)}"]`)) return; // no dupes
+  const w=document.createElement('div'); w.className='att'; w.dataset.name=name;
+  w.innerHTML=`<button type="button" class="pick"><span class="box">✓</span><span>${name}</span></button>
+    <div class="sigwrap hidden"><label>Signature (initials / tap-to-sign)</label><input type="text" placeholder="Sign here"/></div>`;
+  w.querySelector('.pick').addEventListener('click',()=>toggle(name,w));
+  w.querySelector('.sigwrap input').addEventListener('input',e=>state.signatures[name]=e.target.value);
+  attGrid.appendChild(w);
+}
+// Render the attendee grid from the saved crew list (keeps any already-selected).
+function renderAttendees(){
+  const keepSel = new Set(state.selected);
+  const keepSig = Object.assign({}, state.signatures);
+  attGrid.innerHTML='';
+  settings.crew.forEach(c=>addAttendeeCard(c.name));
+  // re-apply selections/signatures for names that still exist
+  keepSel.forEach(name=>{
+    const w=attGrid.querySelector(`.att[data-name="${CSS.escape(name)}"]`);
+    if(w){ w.classList.add('sel'); const sw=w.querySelector('.sigwrap'); sw.classList.remove('hidden');
+      const inp=sw.querySelector('input'); inp.value=keepSig[name]||''; }
+    else { state.selected.delete(name); delete state.signatures[name]; }
+  });
+  document.getElementById('selCount').textContent=state.selected.size;
+  document.getElementById('toCapture').disabled=state.selected.size===0;
+}
+// Apply saved defaults into the Setup fields (only if the user hasn't typed).
+function applyDefaults(){
+  if(settings.defaultSite && !state.siteName){ state.siteName=settings.defaultSite; document.getElementById('siteName').value=settings.defaultSite; }
+  if(settings.defaultLed  && !state.ledBy){ state.ledBy=settings.defaultLed; document.getElementById('ledBy').value=settings.defaultLed; }
+  if(settings.defaultType){ state.meetingType=settings.defaultType; document.getElementById('meetingType').value=settings.defaultType; }
+}
+renderAttendees();
+applyDefaults();
+function toggle(name,w){
+  if(state.selected.has(name)){ state.selected.delete(name); delete state.signatures[name];
+    w.classList.remove('sel'); w.querySelector('.sigwrap').classList.add('hidden'); w.querySelector('.sigwrap input').value=''; }
+  else { state.selected.add(name); w.classList.add('sel'); const sw=w.querySelector('.sigwrap'); sw.classList.remove('hidden');
+    const inp=sw.querySelector('input'); const ini=initialsFor(name); if(ini && !inp.value){ inp.value=ini; state.signatures[name]=ini; } }
+  document.getElementById('selCount').textContent=state.selected.size;
+  document.getElementById('toCapture').disabled=state.selected.size===0;
+}
+document.getElementById('meetingType').addEventListener('change',e=>state.meetingType=e.target.value);
+document.getElementById('siteName').addEventListener('input',e=>state.siteName=e.target.value);
+document.getElementById('meetingDate').addEventListener('input',e=>state.date=e.target.value);
+document.getElementById('ledBy').addEventListener('input',e=>state.ledBy=e.target.value);
+
+// ---------- v4: carry-over — open actions from previous meetings at the site
+// On site-name entry (debounced), ask the register for open actions at that
+// site. The leader can close done ones on the spot; whatever is still open
+// when the meeting proceeds travels as state.carriedOver: read out at
+// Confirm, printed on the record as "Outstanding Actions (carried over)",
+// never duplicated as new action rows in the DB.
+const carryCard=document.getElementById('carryCard'), carryList=document.getElementById('carryList');
+let carryTimer=null;
+function askClosedBy(){
+  if(state.closedByName) return state.closedByName;
+  const suggested = settings.defaultLed || state.ledBy || '';
+  const name = window.prompt('Closed by (your name):', suggested);
+  if(name && name.trim()){ state.closedByName = name.trim(); }
+  return state.closedByName;
+}
+function carryRowHtml(a){
+  const due = a.overdue ? '<span class="ar-due overdue">OVERDUE</span>'
+    : (a.due_date ? '<span class="ar-due dated">due '+escapeHtml(a.due_date)+'</span>'
+                  : '<span class="ar-due nodate">no date</span>');
+  return '<div class="ar-row" data-id="'+a.id+'"><div style="flex:1">'
+    +'<div class="ar-what">'+escapeHtml(a.what)+'</div>'
+    +'<div class="ar-meta">'+escapeHtml(a.who||'Unassigned')+' · raised '+escapeHtml(a.meeting_date||'—')+' · by '+escapeHtml(a.by_when||'—')+' '+due+'</div>'
+    +'</div><button type="button" class="ar-btn close-btn">✓ Close</button></div>';
+}
+function renderCarryCard(){
+  const rows=state.carriedOver;
+  document.getElementById('carryCount').textContent=rows.length;
+  carryCard.classList.toggle('hidden', rows.length===0);
+  carryList.innerHTML=rows.map(carryRowHtml).join('');
+  carryList.querySelectorAll('.ar-row .close-btn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const row=btn.closest('.ar-row'); const id=Number(row.dataset.id);
+      const a=state.carriedOver.find(x=>x.id===id);
+      if(!window.confirm('Mark this action as closed?\n\n'+(a?a.what:''))) return;
+      const closedBy=askClosedBy();
+      btn.disabled=true; btn.textContent='Closing…';
+      try{
+        const res=await apiFetch(apiBase()+'/api/actions/'+id,{method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({status:'closed', closed_by:closedBy})});
+        if(!res.ok) throw new Error('server returned '+res.status);
+        state.carriedOver=state.carriedOver.filter(x=>x.id!==id);
+        renderCarryCard();
+      }catch(err){ btn.disabled=false; btn.textContent='✓ Close'; alert('Couldn’t close it ('+err.message+').'); }
+    });
+  });
+}
+async function checkCarryOver(){
+  if(!backendConfigured()){ state.carriedOver=[]; renderCarryCard(); return; }
+  const site=(state.siteName||'').trim();
+  if(!site){ state.carriedOver=[]; renderCarryCard(); return; }
+  try{
+    const res=await fetch(apiBase()+'/api/actions?status=open&site_name='+encodeURIComponent(site));
+    if(!res.ok) throw new Error(res.status);
+    state.carriedOver=(await res.json()).actions||[];
+  }catch(_){ state.carriedOver=[]; }
+  renderCarryCard();
+}
+function scheduleCarryCheck(){ clearTimeout(carryTimer); carryTimer=setTimeout(checkCarryOver, 500); }
+document.getElementById('siteName').addEventListener('input',scheduleCarryCheck);
+
+// ---------- v5: uploaded templates — list / upload / mapping review ---------
+// The picker keeps the two builtin cards and adds a card per uploaded
+// template (server-backed, so online only). state.templateId travels through
+// /api/minutes, the saved meeting, and exports so the output looks like the
+// spreadsheet the user uploaded.
+const KIND_LABELS={summary:'Meeting details (key–value)',hazards:'Hazards & controls (full HSWA rules)',
+  actions:'Action register',decisions:'Decisions',attendance:'Attendance / sign-on (never sent to the AI)',
+  incidents:'Incidents reviewed',custom:'Custom section (extracted generically)'};
+let uploadedTemplates=[];
+function renderTemplateCards(){
+  const grid=document.getElementById('tplUploads'); grid.innerHTML='';
+  uploadedTemplates.forEach(t=>{
+    const b=document.createElement('button'); b.type='button'; b.className='tpl';
+    b.dataset.tid=t.id;
+    b.innerHTML='<span class="tpl-ic">📄</span><span class="tpl-t">'+escapeHtml(t.name)+'</span>'
+      +'<span class="tpl-d">Your uploaded template'+(t.original_filename?' ('+escapeHtml(t.original_filename)+')':'')+'.</span>';
+    b.addEventListener('click',()=>selectUploadedTemplate(t));
+    grid.appendChild(b);
+  });
+}
+async function refreshTemplates(){
+  if(!backendConfigured()) return;
+  try{
+    const res=await fetch(apiBase()+'/api/templates');
+    if(!res.ok) return;
+    uploadedTemplates=((await res.json()).templates||[]).filter(t=>t.source_kind==='uploaded');
+    renderTemplateCards();
+  }catch(_){}
+}
+function clearTemplateSelection(){
+  state.templateId=null; state.templateSpec=null;
+  document.querySelectorAll('#tplUploads .tpl').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('mapCard').classList.add('hidden');
+}
+function selectUploadedTemplate(t, warnings){
+  state.templateId=t.id; state.templateSpec=t.spec||null;
+  // an uploaded template behaves as safety when it has a hazards sheet
+  const hasHaz=(t.spec&&t.spec.sections||[]).some(s=>s.kind==='hazards');
+  setTemplate(hasHaz?'safety':'general', true);
+  document.querySelectorAll('#tplUploads .tpl').forEach(b=>b.classList.toggle('sel', Number(b.dataset.tid)===t.id));
+  tplSafetyBtn.classList.remove('sel'); tplGeneralBtn.classList.remove('sel');
+  renderMappingCard(t, warnings||[]);
+}
+function renderMappingCard(t, warnings){
+  const card=document.getElementById('mapCard'), list=document.getElementById('mapList');
+  card.classList.remove('hidden'); list.innerHTML='';
+  (t.spec&&t.spec.sections||[]).forEach((s,idx)=>{
+    const row=document.createElement('div'); row.className='ar-row';
+    const customCols=(s.columns||[]).filter(c=>!c.maps_to&&s.kind!=='custom').map(c=>c.label);
+    let sub='';
+    if(customCols.length) sub='Extra columns kept as custom fields: '+customCols.map(escapeHtml).join(', ');
+    row.innerHTML='<div style="flex:1"><div class="ar-what">Sheet “'+escapeHtml(s.title)+'”</div>'
+      +'<div class="ar-meta">'+(sub?escapeHtml('')+sub:'')+'</div></div>';
+    const sel=document.createElement('select'); sel.style.minHeight='36px'; sel.style.maxWidth='46%';
+    Object.keys(KIND_LABELS).forEach(k=>{
+      const o=document.createElement('option'); o.value=k; o.textContent='Read as: '+KIND_LABELS[k];
+      if(k===s.kind) o.selected=true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change',async()=>{
+      const spec=JSON.parse(JSON.stringify(t.spec)); spec.sections[idx].kind=sel.value;
+      if(sel.value==='attendance') spec.sections[idx].ai=false;
+      const st=document.getElementById('mapStatus');
+      try{
+        const res=await apiFetch(apiBase()+'/api/templates/'+t.id,{method:'PATCH',
+          headers:{'Content-Type':'application/json'}, body:JSON.stringify({spec})});
+        if(!res.ok) throw new Error(res.status);
+        t.spec=spec; state.templateSpec=spec;
+        st.textContent='✓ Saved — “'+s.title+'” will now be read as: '+KIND_LABELS[sel.value];
+        st.className='savefeed ok';
+      }catch(err){ st.textContent='✕ Couldn’t save that correction ('+err.message+').'; st.className='savefeed err'; }
+    });
+    row.appendChild(sel);
+    list.appendChild(row);
+  });
+  if(warnings.length){
+    const w=document.createElement('p'); w.className='meta';
+    w.innerHTML='<b>Heads-up — I guessed these:</b><br/>'+warnings.map(escapeHtml).join('<br/>');
+    list.appendChild(w);
+  }
+}
+document.getElementById('tplUploadBtn').addEventListener('click',()=>document.getElementById('tplFile').click());
+document.getElementById('tplFile').addEventListener('change',async e=>{
+  const file=e.target.files && e.target.files[0];
+  if(!file) return;
+  const st=document.getElementById('tplUploadStatus'); st.textContent='Reading '+file.name+'…';
+  const reader=new FileReader();
+  reader.onload=async()=>{
+    const b64=String(reader.result).split(',')[1]||'';
+    try{
+      const res=await apiFetch(apiBase()+'/api/templates',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({filename:file.name, content_base64:b64})});
+      const j=await res.json();
+      if(!res.ok) throw new Error(j.detail||res.status);
+      st.textContent='✓ Template added.';
+      await refreshTemplates();
+      const t=uploadedTemplates.find(x=>x.id===j.template.id)||j.template;
+      t.spec=j.spec;
+      selectUploadedTemplate(t, j.warnings||[]);
+    }catch(err){ st.textContent='✕ '+String(err.message||err).slice(0,160); }
+    e.target.value='';
+  };
+  reader.readAsDataURL(file);
+});
+
+// ---------- v3: template picker ---------------------------------------------
+// The chosen template travels through the whole pipeline as
+// template: "safety" | "general" and drives which sections show on the
+// Confirm and Record screens (and which demo buttons appear).
+const tplSafetyBtn=document.getElementById('tplSafety'), tplGeneralBtn=document.getElementById('tplGeneral');
+function setTemplate(tpl, fromUpload){
+  state.template=tpl;
+  if(!fromUpload) clearTemplateSelection();  // v5: picking a builtin card deselects any upload
+  tplSafetyBtn.classList.toggle('sel', tpl==='safety' && !fromUpload);
+  tplGeneralBtn.classList.toggle('sel', tpl==='general' && !fromUpload);
+  // Meeting-type field: dropdown for safety, free text for general.
+  const sel=document.getElementById('meetingType'), txt=document.getElementById('meetingTypeText');
+  const lbl=document.getElementById('meetingTypeLabel');
+  if(tpl==='general'){
+    sel.classList.add('hidden'); txt.classList.remove('hidden');
+    lbl.setAttribute('for','meetingTypeText'); lbl.textContent='Meeting type';
+    state.meetingType = txt.value.trim() || 'General Meeting';
+  } else {
+    txt.classList.add('hidden'); sel.classList.remove('hidden');
+    lbl.setAttribute('for','meetingType'); lbl.textContent='Meeting Type';
+    state.meetingType = sel.value;
+  }
+  // Demo buttons follow the template.
+  document.querySelectorAll('.demo-safety').forEach(b=>b.classList.toggle('hidden', tpl!=='safety'));
+  document.querySelectorAll('.demo-general').forEach(b=>b.classList.toggle('hidden', tpl!=='general'));
+}
+tplSafetyBtn.addEventListener('click',()=>setTemplate('safety'));
+tplGeneralBtn.addEventListener('click',()=>setTemplate('general'));
+document.getElementById('meetingTypeText').addEventListener('input',e=>{ state.meetingType=e.target.value.trim()||'General Meeting'; });
+setTemplate('safety');
+
+// ---------- Nav ----------
+function show(n){
+  [1,2,3,4].forEach(i=>document.getElementById('screen'+i).classList.toggle('hidden',i!==n));
+  [1,2,3,4].forEach(i=>{const s=document.getElementById('st'+i);s.classList.toggle('active',i===n);s.classList.toggle('done',i<n);});
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.getElementById('toCapture').addEventListener('click',()=>show(2));
+document.getElementById('backTo1').addEventListener('click',()=>{stopRec();show(1);});
+document.getElementById('backToCapture').addEventListener('click',()=>show(2));
+document.getElementById('backTo2').addEventListener('click',()=>show(3));
+document.getElementById('rbConfirm').addEventListener('change',e=>document.getElementById('toRecord').disabled=!e.target.checked);
+document.getElementById('toRecord').addEventListener('click',()=>{
+  const extra=document.getElementById('rbAddNote').value.trim();
+  if(extra) ta.value=(ta.value+'\n'+extra).trim();
+  buildRecord(state.extraction); show(4);
+});
+
+// ---------- Screen 2: transcript + LIVE MIC ----------
+const ta=document.getElementById('transcript');
+const genBtn=document.getElementById('genBtn');
+let loadedDemo=null;
+ta.addEventListener('input',()=>{ genBtn.disabled=ta.value.trim().length<15; loadedDemo=matchDemo(ta.value); });
+
+function loadDemo(n){ const d=DEMOS[n];
+  ta.value=d.text; loadedDemo=n; genBtn.disabled=false;
+  // v3: a demo also selects its template so the whole flow matches.
+  if((d.template||'safety')!==state.template) setTemplate(d.template||'safety');
+  if(d.template==='general'){ document.getElementById('meetingTypeText').value=d.type; state.meetingType=d.type; }
+  else { state.meetingType=d.type; document.getElementById('meetingType').value=d.type; }
+  if(!state.siteName){state.siteName=d.site;document.getElementById('siteName').value=d.site;}
+  if(!state.ledBy){state.ledBy=d.led;document.getElementById('ledBy').value=d.led;}
+  scheduleCarryCheck();  // v4: demo may have just set the site
+  d.speakers.forEach(name=>addAttendeeCard(name)); // ensure demo speakers exist even if trimmed from crew
+  if(state.selected.size===0){ d.speakers.forEach(name=>{ const w=attGrid.querySelector(`.att[data-name="${CSS.escape(name)}"]`);
+    if(w){toggle(name,w);w.querySelector('.sigwrap input').value='(signed on site)';state.signatures[name]='(signed on site)';}}); }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function matchDemo(t){ if(t.includes("mud soup")||t.includes("crushed metal"))return 1; if(t.includes("hot work permit")||t.includes("bench grinder"))return 2; if(t.includes("mezzanine")||t.includes("crane hire"))return 3; return null; }
+
+// --- Web Speech API live capture ---
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const micBtn=document.getElementById('micBtn'), micStatus=document.getElementById('micStatus'), interim=document.getElementById('interim');
+let recog=null, recording=false;
+if(!SR){ micBtn.disabled=true; micStatus.textContent="Live mic isn't supported in this browser — use Chrome/Edge, or paste / load a demo."; }
+function startRec(){
+  try{
+    recog=new SR(); recog.lang='en-NZ'; recog.continuous=true; recog.interimResults=true;
+    recog.onresult=e=>{ let fin='',intr='';
+      for(let i=e.resultIndex;i<e.results.length;i++){ const t=e.results[i][0].transcript; if(e.results[i].isFinal)fin+=t+' '; else intr+=t; }
+      if(fin){ ta.value=(ta.value+' '+fin).replace(/\s+/g,' ').trim()+' '; genBtn.disabled=ta.value.trim().length<15; loadedDemo=matchDemo(ta.value); ta.scrollTop=ta.scrollHeight; }
+      interim.textContent=intr;
+    };
+    recog.onerror=e=>{ micStatus.textContent='Mic: '+e.error+(e.error==='not-allowed'?' — allow microphone access in the browser.':''); if(e.error==='not-allowed')stopRec(); };
+    recog.onend=()=>{ if(recording){ try{recog.start();}catch(_){}} };
+    recog.start(); recording=true;
+    micBtn.classList.add('rec'); micBtn.innerHTML='<span id="micDot">■</span> Stop recording'; micStatus.textContent='Listening… speak naturally.';
+  }catch(err){ micStatus.textContent='Could not start mic: '+err.message; }
+}
+function stopRec(){ recording=false; if(recog){try{recog.stop();}catch(_){}} micBtn.classList.remove('rec'); micBtn.innerHTML='<span id="micDot">●</span> Start recording'; interim.textContent=''; if(ta.value.trim())micStatus.textContent='Recording stopped — review below, then generate.'; }
+micBtn.addEventListener('click',()=>recording?stopRec():startRec());
+
+const genStatus=document.getElementById('genStatus');
+
+genBtn.addEventListener('click',async()=>{
+  stopRec();
+  // Path 1 — a backend is configured: send the real transcript to /api/minutes.
+  if(backendConfigured()){
+    genStatus.textContent='';
+    genBtn.innerHTML='Thinking… reading the talk';
+    genBtn.disabled=true;
+    try{
+      const minutes=await fetchMinutesFromBackend();
+      state.extraction=normalizeMinutes(minutes);
+      state.decisions=minutes.decisions||[];
+      state.usingBackend=true;
+      state.providerUsed=minutes.provider_used||'';  // v4: the provider that actually ran
+      genStatus.textContent='';
+      genBtn.innerHTML='Review &amp; Confirm →'; genBtn.disabled=false;
+      buildReadback(state.extraction); show(3);
+      return;
+    }catch(err){
+      // Backend unreachable/failed — fall back to the offline behaviour so the
+      // app still works, and tell the user plainly what happened.
+      genStatus.textContent='⚠ Couldn’t reach the Minute Man server ('+err.message+'). Using offline mode — the two demos work, other transcripts start a blank record you can fill in.';
+      offlineGenerate();
+      return;
+    }
+  }
+  // Path 2 — no backend configured: original fully-offline demo behaviour.
+  genStatus.textContent='';
+  offlineGenerate();
+});
+
+// Offline generation: use the built-in demo match (or a blank editable record
+// for an unrecognised transcript). Preserves the original static-demo flow.
+// v3: normalises both demo shapes to the internal extraction shape
+// {template, incidents, hazards, actions, decisions, summary, topics}.
+function offlineGenerate(){
+  const which=loadedDemo||matchDemo(ta.value);
+  genBtn.innerHTML='Preparing record…'; genBtn.disabled=true;
+  setTimeout(()=>{
+    state.usingBackend=false;
+    let ex=null;
+    if(which){
+      const d=DEMOS[which];
+      if(d.template==='general'){
+        ex={template:'general', type:d.type, site:d.site, led:d.led,
+            incidents:[], hazards:[],
+            actions:d.general.actions.slice(), decisions:d.general.decisions.slice(),
+            summary:d.general.summary, topics:d.general.topics.slice()};
+      } else {
+        ex={template:'safety', type:d.type, site:d.site, led:d.led,
+            incidents:[], hazards:d.hazards.slice(), actions:d.actions.slice(),
+            decisions:[], summary:'', topics:[]};
+      }
+    }
+    state.extraction=ex;
+    state.decisions=ex?(ex.decisions||[]).slice():[];
+    buildReadback(state.extraction);
+    genBtn.innerHTML='Review &amp; Confirm →'; genBtn.disabled=false;
+    show(3);
+  },400);
+}
+
+// ---------- Screen 3: build the read-back the leader reads aloud ----------
+// v3: sections are template-driven —
+//   safety : incidents → hazards → actions → decisions → summary
+//   general: summary → actions → decisions
+function rbSection(title,orange,items,emptyText,fmt){
+  const h=`<span class="rb-h${orange?' orange':''}">${title}</span>`;
+  const lis=(items&&items.length)?items.map(fmt).join(''):`<li class="none">${emptyText}</li>`;
+  return h+`<ul class="rb" style="margin-bottom:16px">${lis}</ul>`;
+}
+// v5 (03-D): JS mirror of the server's unambiguous due-date parse — used only
+// to decide whether to show the "no clear date" nudge chip. Never guesses.
+const JS_WEEKDAYS={monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6,sunday:0};
+function jsHasClearDate(byWhen){
+  const t=String(byWhen||'').trim().toLowerCase();
+  if(!t) return false;
+  if(/\b\d{4}-\d{2}-\d{2}\b/.test(t)) return true;
+  const first=t.split(/[\s,;.!]+/)[0];
+  return first==='today'||first==='tomorrow'||Object.prototype.hasOwnProperty.call(JS_WEEKDAYS,first);
+}
+
+function buildReadback(ex){
+  const S=document.getElementById('rbSections'); let html='';
+  const t=(ex&&ex.template)||state.template;
+  // v5: actions with no parseable date get an amber "pick one?" chip —
+  // skippable, never blocking, never guessed (03-D). Custom template fields
+  // render generically as label: value.
+  const fmtAct=(a,i)=>{
+    const nudge = jsHasClearDate(a.when) ? ''
+      : ` <span class="ar-due nodate">no clear date</span> <input type="date" class="nudge-date" data-idx="${i}" title="Pick a date (optional)" style="min-height:26px;font-size:12px;border:1px solid #d97706;border-radius:6px;padding:1px 4px" />`;
+    return `<li><b>${a.who}</b> — ${a.what} <em>(by ${a.when})</em>${customPairsHtml(a.custom,'actions')}${nudge}</li>`;
+  };
+  const fmtDec=d=>`<li>${d}</li>`;
+  const fmtSum=s=>`<li>${String(s).replace(/\n+/g,'<br/>')}</li>`;
+  if(t==='general'){
+    html+=rbSection('Meeting summary',false,(ex&&ex.summary)?[ex.summary]:[],
+      'No summary was auto-extracted — read the talk back and add anything missed below.',fmtSum);
+    html+=rbSection('Actions &amp; follow-ups — confirm the owner and the date',true,ex?ex.actions:[],
+      'No actions or follow-ups identified — confirm none are needed, or add them on the next screen.',fmtAct);
+    html+=rbSection('Decisions made',false,ex?ex.decisions:[],'No decisions recorded.',fmtDec);
+  } else {
+    html+=rbSection('Incidents reviewed',false,ex?ex.incidents:[],'No incidents were reviewed.',
+      i=>`<li><b>${i.description}</b> — ${i.outcome||''} <em>(${i.severity||'not stated'})</em></li>`);
+    html+=rbSection('What we covered — hazards &amp; controls',false,ex?ex.hazards:[],
+      'Nothing was auto-extracted from this transcript in the demo build — read the talk back to the group, then add hazards on the next screen.',
+      h=>`<li><b>${h.hazard}</b> — control agreed: ${h.control}. <em>(${h.tier})</em>${customPairsHtml(h.custom,'hazards')}</li>`);
+    html+=rbSection('Actions &amp; follow-ups — confirm the owner and the date',true,ex?ex.actions:[],
+      'No actions or follow-ups identified — confirm none are needed, or add them on the next screen.',fmtAct);
+    html+=rbSection('Decisions made',false,ex?ex.decisions:[],'No decisions recorded.',fmtDec);
+    html+=rbSection('Minutes summary',false,(ex&&ex.summary)?[ex.summary]:[],'No summary was auto-extracted.',fmtSum);
+  }
+  // v5: custom sections from an uploaded template, rendered generically.
+  if(ex && ex.customSections && Object.keys(ex.customSections).length){
+    customSectionDefs().forEach(def=>{
+      const key=snakeTitle(def.title);
+      const rows=ex.customSections[key]||[];
+      html+=rbSection(escapeHtml(def.title),false,rows,'Nothing recorded for this section.',
+        r=>'<li>'+ (def.columns||[]).map(c=>escapeHtml(c.label)+': '+escapeHtml(r[c.key]==null?'—':r[c.key])).join(' · ') +'</li>');
+    });
+  }
+  // v4: carried-over actions — final section, read out like the others.
+  if(state.carriedOver.length){
+    html+=rbSection('Carried-over actions — still outstanding',true,state.carriedOver,'',
+      a=>`<li><b>${a.who||'Unassigned'}</b> — ${a.what} <em>(raised ${a.meeting_date||'—'}, by ${a.by_when||'—'})</em></li>`);
+  }
+  S.innerHTML=html;
+  // v5 (03-D): wire the nudge date pickers — choosing a date rewrites by_when
+  // to the unambiguous ISO form; skipping leaves it amber. Never guessed.
+  S.querySelectorAll('.nudge-date').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      const i=Number(inp.dataset.idx);
+      if(inp.value && state.extraction && state.extraction.actions[i]){
+        state.extraction.actions[i].when=inp.value;
+        buildReadback(state.extraction);
+      }
+    });
+  });
+
+  document.getElementById('rbAtt').textContent=`${state.selected.size} attendee${state.selected.size===1?'':'s'} present and signed in.`;
+  document.getElementById('rbAddNote').value='';
+  document.getElementById('rbConfirm').checked=false;
+  document.getElementById('toRecord').disabled=true;
+}
+
+// ---------- Screen 3: build the editable record sheet ----------
+function cell(txt,edit){ return `<td${edit?' contenteditable':''}>${txt||''}</td>`; }
+function incRow(i){ return `<tr>${cell(i.description,1)}${cell(i.severity,1)}${cell(i.outcome,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
+function hazRow(h){ return `<tr>${cell(h.hazard,1)}${cell(h.control,1)}<td contenteditable><span class="tier">${h.tier||''}</span></td>${cell(h.note,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
+function actRow(a){ return `<tr${a.carriedFrom?` data-cf="${a.carriedFrom}"`:''}>${cell(a.who,1)}${cell(a.what,1)}${cell(a.when,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
+function decRow(d){ return `<tr>${cell(d,1)}<td><span class="rm" onclick="this.closest('tr').remove()">✕</span></td></tr>`; }
+function addInc(){ document.querySelector('#incTable tbody').insertAdjacentHTML('beforeend',incRow({description:'',severity:'',outcome:''})); }
+function addHaz(){ document.querySelector('#hazTable tbody').insertAdjacentHTML('beforeend',hazRow({hazard:'',control:'',tier:'',note:''})); }
+function addAct(){ document.querySelector('#actTable tbody').insertAdjacentHTML('beforeend',actRow({who:'',what:'',when:''})); }
+function addDec(){ document.querySelector('#decTable tbody').insertAdjacentHTML('beforeend',decRow('')); }
+
+function buildRecord(ex){
+  const t=(ex&&ex.template)||state.template;
+  const isGen = t==='general';
+  // v3: sheet title, section visibility and section ORDER follow the template.
+  //   safety : incidents, hazards, actions, decisions, summary, notes, attendance
+  //   general: attendees, summary, actions, decisions, notes (no hazards/incidents)
+  document.querySelector('.sheet-bar .t').textContent = isGen ? 'MEETING RECORD' : 'TOOLBOX TALK RECORD';
+  document.getElementById('incSect').classList.toggle('hidden', isGen);
+  document.getElementById('hazSect').classList.toggle('hidden', isGen);
+  document.getElementById('sumHeading').textContent = isGen ? 'Meeting Summary' : 'Minutes Summary';
+  document.getElementById('attHeading').textContent = isGen ? 'Attendees & Sign-off' : 'Attendance & Sign-off';
+  const sheet=document.getElementById('sheet'); const disc=sheet.querySelector('.disc');
+  const order = isGen
+    ? ['attSect','sumSect','actSect','carrySect','decSect','customSect','notesSect','incSect','hazSect']
+    : ['incSect','hazSect','actSect','carrySect','decSect','sumSect','customSect','notesSect','attSect'];
+  order.forEach(id=>sheet.insertBefore(document.getElementById(id), disc));
+
+  document.getElementById('shType').textContent=state.meetingType;
+  document.getElementById('shSite').textContent=state.siteName||'—';
+  document.getElementById('shDate').textContent=state.date||'—';
+  document.getElementById('shLed').textContent=state.ledBy||(ex?ex.led:'—');
+  document.getElementById('shCount').textContent=state.selected.size;
+
+  const ib=document.querySelector('#incTable tbody'); ib.innerHTML='';
+  const hb=document.querySelector('#hazTable tbody'); hb.innerHTML='';
+  const ab=document.querySelector('#actTable tbody'); ab.innerHTML='';
+  const db=document.querySelector('#decTable tbody'); db.innerHTML='';
+  if(ex){
+    (ex.incidents||[]).forEach(i=>ib.insertAdjacentHTML('beforeend',incRow(i)));
+    (ex.hazards||[]).forEach(h=>hb.insertAdjacentHTML('beforeend',hazRow(h)));
+    (ex.actions||[]).forEach(a=>ab.insertAdjacentHTML('beforeend',actRow(a)));
+    (ex.decisions||[]).forEach(d=>db.insertAdjacentHTML('beforeend',decRow(d)));
+    document.getElementById('shSummary').textContent=ex.summary||'';
+  } else {
+    if(!isGen){ addHaz(); }   // empty editable starter rows for live capture (v2.2 behaviour)
+    addAct();
+    document.getElementById('shSummary').textContent='';
+  }
+
+  // v4: Outstanding Actions (carried over) — shown on the record; a row can
+  // be explicitly re-committed into THIS meeting (becomes a fresh action row
+  // linked back via carried_from_meeting_id); otherwise it is never
+  // duplicated in the DB — the register already tracks it.
+  const cb=document.querySelector('#carryTable tbody'); cb.innerHTML='';
+  document.getElementById('carrySect').classList.toggle('hidden', state.carriedOver.length===0);
+  state.carriedOver.forEach(a=>{
+    const tr=document.createElement('tr'); tr.dataset.carryId=a.id;
+    tr.innerHTML=`<td>${escapeHtml(a.who||'Unassigned')}</td><td>${escapeHtml(a.what)}</td><td>${escapeHtml(a.meeting_date||'—')}</td>`
+      +`<td><button type="button" class="addrow" style="margin:0">↻ re-commit into this meeting</button></td>`;
+    tr.querySelector('button').addEventListener('click',()=>{
+      document.querySelector('#actTable tbody').insertAdjacentHTML('beforeend',
+        actRow({who:a.who, what:a.what, when:a.by_when, carriedFrom:a.meeting_id}));
+      state.carriedOver=state.carriedOver.filter(x=>x.id!==a.id);
+      tr.remove();
+      document.getElementById('carrySect').classList.toggle('hidden', state.carriedOver.length===0);
+    });
+    cb.appendChild(tr);
+  });
+
+  // v5: custom template content, rendered generically (label: value). Custom
+  // ROW fields are listed under their table (the editable cells stay pure
+  // core fields); custom SECTIONS get their own block. Read-only in v5.
+  const customBody=document.getElementById('customBody');
+  customBody.innerHTML='';
+  document.querySelectorAll('#hazSect .ar-meta, #actSect .ar-meta').forEach(e=>e.remove()); // no dupes on rebuild
+  let anyCustom=false;
+  const rowCustoms=(kind,items)=>{
+    const labels=customColLabels(kind);
+    const lines=[];
+    (items||[]).forEach((it,i)=>{
+      if(it && it.custom){
+        const bits=Object.entries(it.custom).filter(([,v])=>v!=null&&v!=='')
+          .map(([k,v])=>escapeHtml(labels[k]||k)+': '+escapeHtml(v));
+        if(bits.length) lines.push('<div class="ar-meta">Row '+(i+1)+' — '+bits.join(' · ')+'</div>');
+      }
+    });
+    return lines.join('');
+  };
+  if(ex){
+    const hazCustom=rowCustoms('hazards', ex.hazards);
+    if(hazCustom){ document.querySelector('#hazSect').insertAdjacentHTML('beforeend', hazCustom); }
+    const actCustom=rowCustoms('actions', ex.actions);
+    if(actCustom){ document.querySelector('#actSect').insertAdjacentHTML('beforeend', actCustom); }
+    if(ex.customSections && Object.keys(ex.customSections).length){
+      customSectionDefs().forEach(def=>{
+        const key=snakeTitle(def.title);
+        const rows=ex.customSections[key]||[];
+        anyCustom=true;
+        let html='<p style="margin:8px 0 2px"><b>'+escapeHtml(def.title)+'</b></p>';
+        html+= rows.length
+          ? '<table class="ftable"><thead><tr>'+(def.columns||[]).map(c=>'<th>'+escapeHtml(c.label)+'</th>').join('')+'</tr></thead><tbody>'
+            + rows.map(r=>'<tr>'+(def.columns||[]).map(c=>'<td>'+escapeHtml(r[c.key]==null?'':r[c.key])+'</td>').join('')+'</tr>').join('')
+            + '</tbody></table>'
+          : '<p class="ar-meta">Nothing recorded.</p>';
+        customBody.insertAdjacentHTML('beforeend', html);
+      });
+    }
+  }
+  document.getElementById('customSect').classList.toggle('hidden', !anyCustom);
+
+  // discussion notes: keep the raw transcript so live capture is never lost
+  document.getElementById('shNotes').textContent = ta.value.trim();
+
+  // attendance & sign-off
+  const sg=document.getElementById('signGrid'); sg.innerHTML='';
+  Array.from(state.selected).forEach(n=>{ sg.insertAdjacentHTML('beforeend',
+    `<div class="signrow"><span class="nm">${n}</span><span class="sg" contenteditable>${state.signatures[n]||'________'}</span></div>`); });
+  if(state.selected.size===0) sg.innerHTML='<div class="signrow"><span class="nm" style="color:#94a3b8">No attendees selected on Setup.</span></div>';
+
+  // v3: Save-to-Register only when a backend is configured; offline shows why not.
+  const canSave=backendConfigured();
+  document.getElementById('saveRegBtn').classList.toggle('hidden', !canSave);
+  document.getElementById('saveRegOffline').classList.toggle('hidden', canSave);
+  const st=document.getElementById('saveRegStatus'); st.textContent=''; st.className='savefeed';
+  state.lastSavedId=null;
+
+  saveLastMeetingSnapshot(ex);
+}
+
+// ---------- Previous meeting playback ----------------------------------------
+// Snapshot the just-built record (everything the Confirm step already had the
+// team sign off on) so the NEXT meeting's leader can play it back before
+// starting a new one. Deliberately excludes attendance — playback is a spoken
+// recap of what was discussed/agreed, not a roll call.
+const LAST_MEETING_KEY = 'minuteman_last_meeting_v1';
+function saveLastMeetingSnapshot(ex){
+  const payload = {
+    template: (ex && ex.template) || state.template,
+    meetingType: state.meetingType, siteName: state.siteName, date: state.date, ledBy: state.ledBy,
+    incidents: (ex && ex.incidents) ? ex.incidents.map(i=>({description:i.description, severity:i.severity, outcome:i.outcome})) : [],
+    hazards: (ex && ex.hazards) ? ex.hazards.map(h=>({hazard:h.hazard, control:h.control, tier:h.tier})) : [],
+    actions: (ex && ex.actions) ? ex.actions.map(a=>({who:a.who, what:a.what, when:a.when})) : [],
+    decisions: state.decisions || [],
+    summary: (ex && ex.summary) || ''
+  };
+  try{ localStorage.setItem(LAST_MEETING_KEY, JSON.stringify(payload)); }catch(_){}
+  refreshHomePrev();
+}
+function loadLastMeeting(){ try{ const raw=localStorage.getItem(LAST_MEETING_KEY); return raw?JSON.parse(raw):null; }catch(_){ return null; } }
+function hasLastMeeting(){ return !!loadLastMeeting(); }
+// v3: with a backend configured the home screen offers the Meeting Register;
+// the localStorage "Previous Meeting" playback stays as the offline fallback.
+function refreshHomePrev(){
+  const prev=document.getElementById('homePrev'), reg=document.getElementById('homeRegister');
+  const acts=document.getElementById('homeActions');  // v4
+  if(backendConfigured()){
+    if(reg) reg.style.display='';
+    if(acts) acts.style.display='';
+    if(prev) prev.style.display='none';
+  } else {
+    if(reg) reg.style.display='none';
+    if(acts) acts.style.display='none';  // register features are online-only
+    if(prev) prev.style.display = hasLastMeeting() ? '' : 'none';
+  }
+}
+
+// Build the spoken script: section name, then a condensed sentence per item.
+// Skips attendance entirely, per spec. Condensed phrasing (matching the Confirm
+// read-back style) keeps total runtime to a few minutes even with a full set
+// of hazards/actions/decisions.
+function buildPlaybackScript(rec){
+  // v3: template-aware section order (same order as the Confirm read-back).
+  //   safety : incidents → hazards → actions → decisions → summary
+  //   general: summary → actions → decisions
+  const isGen = rec.template==='general';
+  const parts=[`Previous meeting. ${rec.meetingType||(isGen?'Meeting':'Toolbox Talk')}, ${rec.siteName||'site not recorded'}.`];
+  if(!isGen){
+    parts.push('Incidents reviewed.');
+    if(rec.incidents && rec.incidents.length){
+      rec.incidents.forEach(i=>parts.push(`${i.description}. ${i.outcome||''}`));
+    } else { parts.push('No incidents were reviewed.'); }
+    parts.push('Hazards and controls.');
+    if(rec.hazards && rec.hazards.length){
+      rec.hazards.forEach(h=>parts.push(`${h.hazard}. Control agreed: ${h.control}. ${h.tier||''}.`));
+    } else { parts.push('No hazards were recorded.'); }
+  } else {
+    parts.push('Meeting summary.');
+    parts.push(rec.summary || 'No summary was recorded.');
+  }
+  parts.push('Actions and follow ups.');
+  if(rec.actions && rec.actions.length){
+    rec.actions.forEach(a=>parts.push(`${a.who}. ${a.what}. By ${a.when}.`));
+  } else { parts.push('No actions were recorded.'); }
+  parts.push('Decisions.');
+  if(rec.decisions && rec.decisions.length){
+    rec.decisions.forEach(d=>parts.push(String(d)));
+  } else { parts.push('No decisions were recorded.'); }
+  if(!isGen){
+    parts.push('Minutes summary.');
+    parts.push(rec.summary || 'No summary was recorded.');
+  }
+  parts.push('End of previous meeting.');
+  return parts;
+}
+
+let playbackActive=false;
+function playRec(rec){
+  if(!rec) return;
+  const statusEl=document.getElementById('pbStatus'), stopBtn=document.getElementById('pbStop');
+  if(!('speechSynthesis' in window)){
+    statusEl.textContent='Audio playback isn’t supported in this browser — try Chrome or Edge.';
+    stopBtn.style.display='none';
+    return;
+  }
+  const script=buildPlaybackScript(rec);
+  let i=0; playbackActive=true;
+  statusEl.textContent='Playing…'; stopBtn.style.display='';
+  function next(){
+    if(!playbackActive || i>=script.length){
+      playbackActive=false;
+      statusEl.textContent = i>=script.length ? 'Finished — hit New Meeting to start the next one.' : 'Stopped.';
+      stopBtn.style.display='none';
+      return;
+    }
+    const u=new SpeechSynthesisUtterance(script[i]); i++;
+    u.rate=0.98; u.onend=next; u.onerror=next;
+    window.speechSynthesis.speak(u);
+  }
+  next();
+}
+function stopPlayback(){
+  playbackActive=false;
+  try{ window.speechSynthesis.cancel(); }catch(_){}
+  const statusEl=document.getElementById('pbStatus'), stopBtn=document.getElementById('pbStop');
+  if(statusEl) statusEl.textContent='Stopped.';
+  if(stopBtn) stopBtn.style.display='none';
+}
+// v3: playback works for any record shape (localStorage snapshot OR a meeting
+// fetched from the server register) — never speaks attendance.
+function openPlaybackFor(rec){
+  if(!rec) return;
+  document.getElementById('pbMeta').textContent = `${rec.meetingType||'Meeting'} — ${rec.siteName||'—'} — ${rec.date||'—'}`;
+  document.getElementById('playbackModal').classList.remove('hidden');
+  playRec(rec);
+}
+function openPlayback(){ openPlaybackFor(loadLastMeeting()); }
+
+// ---------- Export -----------------------------------------------------------
+// Small helper: trigger a browser download for a Blob.
+function downloadBlob(blob,name){
+  const url=URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Read the (edited) Record sheet back into the exporter's exact JSON contract.
+// NOTE the field-name mapping: tier→control_tier, note→compliance_note,
+// when→by_when, and meeting_type/site_name/meeting_date. Send these names or the
+// exporter silently drops columns.
+function buildExportPayload(){
+  const g=id=>document.getElementById(id).textContent.trim();
+  const isGen = state.template==='general';
+  const incidents=[];
+  document.querySelectorAll('#incTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');
+    if(c[0].textContent.trim()) incidents.push({description:c[0].textContent.trim(), severity:c[1].textContent.trim()||'not stated', outcome:c[2].textContent.trim()});});
+  const hazards=[];
+  document.querySelectorAll('#hazTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');
+    hazards.push({hazard:c[0].textContent.trim(), control:c[1].textContent.trim(), control_tier:c[2].textContent.trim(), compliance_note:c[3].textContent.trim()});});
+  const actions=[];
+  document.querySelectorAll('#actTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');
+    const row={who:c[0].textContent.trim(), what:c[1].textContent.trim(), by_when:c[2].textContent.trim()};
+    if(tr.dataset.cf) row.carried_from_meeting_id=Number(tr.dataset.cf);  // v4 re-commit provenance
+    actions.push(row);});
+  const decisions=[];
+  document.querySelectorAll('#decTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');
+    const d=c[0].textContent.trim(); if(d) decisions.push(d);});
+  const attendance=[];
+  document.querySelectorAll('#signGrid .signrow').forEach(r=>{const nm=r.querySelector('.nm'),sg=r.querySelector('.sg');
+    if(sg)attendance.push({name:nm.textContent.trim(), signature:sg.textContent.trim()});});
+  // v5: custom row fields ride from the extraction state (read-only in v5,
+  // matched to core rows by position — the sheet's core cells stay editable).
+  const exHaz=(state.extraction&&state.extraction.hazards)||[];
+  const exAct=(state.extraction&&state.extraction.actions)||[];
+  hazards.forEach((h,i)=>{ if(exHaz[i]&&exHaz[i].custom) h.custom=exHaz[i].custom; });
+  actions.forEach((a,i)=>{ if(exAct[i]&&exAct[i].custom) a.custom=exAct[i].custom; });
+  return {
+    template: state.template,
+    template_id: state.templateId,   // v5
+    custom_sections: (state.extraction && state.extraction.customSections) || {},  // v5
+    meeting_type:g('shType'), site_name:g('shSite'), meeting_date:g('shDate'), led_by:g('shLed'),
+    summary: document.getElementById('shSummary').textContent.trim(),
+    topics: (state.extraction && state.extraction.topics) || [],
+    incidents: isGen?[]:incidents,
+    hazards: isGen?[]:hazards,
+    // v4: still-outstanding carried-over actions, for the exported record
+    carried_over: state.carriedOver.map(a=>({who:a.who||'', what:a.what,
+      original_date:a.meeting_date||'', by_when:a.by_when||''})),
+    actions, decisions, attendance
+  };
+}
+
+// Self-contained CSV built in the browser — the offline fallback. Reads live edits.
+function csvString(){
+  const g=id=>document.getElementById(id).textContent.trim();
+  const esc=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+  const rows=[['Minute Man — '+g('shType')+' Record'],['Site',g('shSite')],['Date',g('shDate')],['Led by',g('shLed')],['Present',g('shCount')],[]];
+  const isGen = state.template==='general';
+  if(!isGen){
+    rows.push(['Incidents Reviewed'],['Description','Severity','Review outcome']);
+    document.querySelectorAll('#incTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');rows.push([c[0].textContent,c[1].textContent,c[2].textContent]);});
+    rows.push([],['Hazards & Controls Discussed'],['Hazard','Control','Tier','HSWA note']);
+    document.querySelectorAll('#hazTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');rows.push([c[0].textContent,c[1].textContent,c[2].textContent.trim(),c[3].textContent]);});
+    rows.push([]);
+  }
+  rows.push(['Actions Agreed'],['Who','What','By when']);
+  document.querySelectorAll('#actTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');rows.push([c[0].textContent,c[1].textContent,c[2].textContent]);});
+  rows.push([],['Decisions Made']);
+  document.querySelectorAll('#decTable tbody tr').forEach(tr=>{const c=tr.querySelectorAll('td');if(c[0].textContent.trim())rows.push([c[0].textContent]);});
+  rows.push([],[isGen?'Meeting Summary':'Minutes Summary'],[document.getElementById('shSummary').textContent]);
+  rows.push([],['Discussion Notes'],[document.getElementById('shNotes').textContent]);
+  rows.push([],['Attendance & Sign-off'],['Name','Signature']);
+  document.querySelectorAll('#signGrid .signrow').forEach(r=>{const nm=r.querySelector('.nm'),sg=r.querySelector('.sg');if(sg)rows.push([nm.textContent,sg.textContent]);});
+  return rows.map(r=>r.map(esc).join(',')).join('\n');
+}
+function buildCsvFromSheet(){
+  const g=id=>document.getElementById(id).textContent.trim();
+  downloadBlob(new Blob([csvString()],{type:'text/csv;charset=utf-8'}),'minute-man-'+g('shType').toLowerCase().replace(/ /g,'-')+'.csv');
+}
+
+const csvBtn=document.getElementById('csvBtn');
+csvBtn.addEventListener('click',async()=>{
+  // If a backend is configured AND this record came from it, download the
+  // branded 5-sheet Excel from /export/excel. Otherwise (or on failure) fall
+  // back to the browser-built CSV so export always works.
+  if(backendConfigured() && state.usingBackend){
+    const label=csvBtn.innerHTML;
+    csvBtn.innerHTML='Building Excel…'; csvBtn.disabled=true;
+    try{
+      const payload=buildExportPayload();
+      const res=await fetch(apiBase()+'/export/excel',{
+        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+      if(!res.ok) throw new Error('server returned '+res.status);
+      const blob=await res.blob();
+      const fname='minute-man-'+(payload.meeting_type||'record').toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.xlsx';
+      downloadBlob(blob,fname);
+      csvBtn.innerHTML=label; csvBtn.disabled=false;
+      return;
+    }catch(err){
+      csvBtn.innerHTML=label; csvBtn.disabled=false;
+      alert('Couldn’t reach the Excel service ('+err.message+'). Downloading a CSV instead — it opens in Excel too.');
+      // fall through to CSV
+    }
+  }
+  buildCsvFromSheet();
+});
+
+// ---------- Geolocation: auto-fill Site from the device (OpenStreetMap) ------
+const geoBtn=document.getElementById('geoBtn'), geoStatus=document.getElementById('geoStatus');
+geoBtn.addEventListener('click',()=>{
+  if(!('geolocation' in navigator)){ geoStatus.textContent='Location not supported here.'; return; }
+  geoStatus.textContent='Locating…'; geoBtn.disabled=true;
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const {latitude:lat, longitude:lon}=pos.coords;
+    const coords=lat.toFixed(5)+', '+lon.toFixed(5);
+    try{
+      // Free reverse-geocode (no API key). Returns an address for the coordinates.
+      const r=await fetch('https://nominatim.openstreetmap.org/reverse?format=json&zoom=18&lat='+lat+'&lon='+lon,{headers:{'Accept':'application/json'}});
+      if(!r.ok) throw new Error('lookup '+r.status);
+      const d=await r.json(); const a=d.address||{};
+      const parts=[ (a.house_number&&a.road)?(a.house_number+' '+a.road):a.road,
+                    a.suburb||a.neighbourhood||a.hamlet,
+                    a.city||a.town||a.village||a.county ].filter(Boolean);
+      const place=parts.length?parts.join(', '):(d.display_name||coords);
+      document.getElementById('siteName').value=place; state.siteName=place;
+      geoStatus.textContent='Location set — edit if needed.';
+      scheduleCarryCheck();  // v4: the site changed — look for open actions
+    }catch(_){
+      document.getElementById('siteName').value=coords; state.siteName=coords;
+      geoStatus.textContent='Address lookup unavailable — used GPS coordinates.';
+      scheduleCarryCheck();
+    }
+    geoBtn.disabled=false;
+  }, err=>{
+    geoStatus.textContent = (err && err.code===1) ? 'Permission denied — enter the site manually.' : 'Couldn’t get location — enter manually.';
+    geoBtn.disabled=false;
+  }, {enableHighAccuracy:true, timeout:10000, maximumAge:60000});
+});
+
+// ---------- Settings modal (crew list + saved defaults) ---------------------
+const settingsModal=document.getElementById('settingsModal');
+const crewListEl=document.getElementById('crewList');
+function crewRow(name,initials){
+  const esc=s=>String(s||'').replace(/"/g,'&quot;');
+  const row=document.createElement('div'); row.className='crewrow';
+  row.innerHTML='<input type="text" class="cn" placeholder="Name" value="'+esc(name)+'"/>'+
+                '<input type="text" class="ci" placeholder="e.g. SA" value="'+esc(initials)+'"/>'+
+                '<span class="del" title="Remove">✕</span>';
+  row.querySelector('.del').addEventListener('click',()=>row.remove());
+  return row;
+}
+function openSettings(){
+  document.getElementById('setSite').value=settings.defaultSite;
+  document.getElementById('setLed').value=settings.defaultLed;
+  document.getElementById('setType').value=settings.defaultType;
+  crewListEl.innerHTML='';
+  settings.crew.forEach(c=>crewListEl.appendChild(crewRow(c.name,c.initials)));
+  settingsModal.classList.remove('hidden');
+}
+function closeSettings(){ settingsModal.classList.add('hidden'); }
+document.getElementById('openSettings').addEventListener('click',openSettings);
+document.getElementById('cancelSettings').addEventListener('click',closeSettings);
+settingsModal.addEventListener('click',e=>{ if(e.target===settingsModal) closeSettings(); });
+document.getElementById('addCrew').addEventListener('click',()=>{ crewListEl.appendChild(crewRow('','')); crewListEl.scrollTop=crewListEl.scrollHeight; });
+document.getElementById('saveSettings').addEventListener('click',()=>{
+  const crew=[];
+  crewListEl.querySelectorAll('.crewrow').forEach(r=>{ const n=r.querySelector('.cn').value.trim(); const i=r.querySelector('.ci').value.trim(); if(n) crew.push({name:n,initials:i}); });
+  settings.crew = crew.length?crew:DEFAULT_CREW.slice();
+  settings.defaultSite=document.getElementById('setSite').value.trim();
+  settings.defaultLed =document.getElementById('setLed').value.trim();
+  settings.defaultType=document.getElementById('setType').value;
+  saveSettings(); renderAttendees(); applyDefaults(); closeSettings();
+});
+
+// ---------- Share / Send: OS share sheet on mobile (Gmail/Outlook/Drive/…) ---
+const shareBtn=document.getElementById('shareBtn');
+shareBtn.addEventListener('click',async()=>{
+  const g=id=>document.getElementById(id).textContent.trim();
+  const base='minute-man-'+g('shType').toLowerCase().replace(/[^a-z0-9]+/g,'-');
+  const label=shareBtn.innerHTML; shareBtn.disabled=true; shareBtn.innerHTML='Preparing…';
+  let file;
+  try{
+    if(backendConfigured() && state.usingBackend){
+      const res=await fetch(apiBase()+'/export/excel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(buildExportPayload())});
+      if(!res.ok) throw new Error('export '+res.status);
+      file=new File([await res.blob()], base+'.xlsx', {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    } else {
+      file=new File([csvString()], base+'.csv', {type:'text/csv'});
+    }
+  }catch(err){
+    shareBtn.innerHTML=label; shareBtn.disabled=false;
+    alert('Couldn’t prepare the file to share ('+err.message+').'); return;
+  }
+  shareBtn.innerHTML=label; shareBtn.disabled=false;
+  // Best path (phones): native share sheet with the file attached.
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:g('shType')+' record', text:'Minute Man record — '+g('shSite')}); return; }
+    catch(err){ if(err && err.name==='AbortError') return; }
+  }
+  // Fallback (most desktops): download so they can attach it themselves.
+  downloadBlob(file, file.name);
+  alert('This device can’t open the share sheet, so the record was downloaded instead — attach it to an email or upload it to Drive.');
+});
+
+// ---------- v3: Save to Register (POST /api/meetings) -----------------------
+const saveRegBtn=document.getElementById('saveRegBtn'), saveRegStatus=document.getElementById('saveRegStatus');
+saveRegBtn.addEventListener('click',async()=>{
+  if(!backendConfigured()) return;
+  const p=buildExportPayload();
+  const body={
+    template:p.template, meeting_type:p.meeting_type, site_name:p.site_name,
+    meeting_date:p.meeting_date, led_by:p.led_by, summary:p.summary,
+    transcript:ta.value.trim(),
+    // v4: the real provider echoed by /api/minutes, with the v3 fallbacks
+    provider_used: state.providerUsed || (state.usingBackend?'backend (server default)':'offline-demo'),
+    confirmed_by_leader:true,   // the Confirm screen gate was passed to get here
+    app_version:APP_VERSION,
+    extra: p.template==='general' ? {topics:p.topics||[]} : {},
+    attendance:p.attendance, incidents:p.incidents, hazards:p.hazards,
+    actions:p.actions.filter(a=>a.what), decisions:p.decisions,
+    carried_over: state.carriedOver.map(a=>a.id),  // v4: recorded in extra server-side
+    template_id: p.template_id,           // v5
+    custom_sections: p.custom_sections    // v5: stored in extra, register-exempt
+  };
+  const label=saveRegBtn.innerHTML; saveRegBtn.disabled=true; saveRegBtn.innerHTML='Saving…';
+  saveRegStatus.textContent=''; saveRegStatus.className='savefeed';
+  try{
+    const res=await apiFetch(apiBase()+'/api/meetings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(!res.ok){ let detail=''; try{ const j=await res.json(); detail=j.detail?JSON.stringify(j.detail).slice(0,120):''; }catch(_){}
+      throw new Error(res.status+(detail?' — '+detail:'')); }
+    const saved=await res.json();
+    state.lastSavedId=saved.id;
+    saveRegStatus.textContent='✓ Saved to the register (meeting #'+saved.id+').';
+    saveRegStatus.className='savefeed ok';
+  }catch(err){
+    saveRegStatus.textContent='✕ Save failed ('+err.message+') — the record is still on this screen; try again.';
+    saveRegStatus.className='savefeed err';
+  }
+  saveRegBtn.innerHTML=label; saveRegBtn.disabled=false;
+});
+
+// ---------- v3: Meeting Register (list / view / play back / re-export) ------
+const registerModal=document.getElementById('registerModal'), regList=document.getElementById('regList'), regStatus=document.getElementById('regStatus');
+const meetingViewModal=document.getElementById('meetingViewModal');
+let mvMeeting=null;
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
+function plural(n,w){ return n+' '+w+(n===1?'':'s'); }
+// v4: the register keeps filter state — search, date range, archived toggle,
+// and "Load more" pagination past the first 50.
+const REG_PAGE = 50;
+const regState = { offset:0, done:false };
+function regQueryString(){
+  const p=new URLSearchParams();
+  p.set('limit', String(REG_PAGE));
+  p.set('offset', String(regState.offset));
+  const q=document.getElementById('regSearch').value.trim(); if(q) p.set('q', q);
+  const f=document.getElementById('regFrom').value.trim(); if(f) p.set('from', f);
+  const t=document.getElementById('regTo').value.trim(); if(t) p.set('to', t);
+  if(document.getElementById('regArchived').checked) p.set('include_archived','true');
+  return p.toString();
+}
+function regRowEl(r){
+  const counts = r.template==='general'
+    ? plural(r.action_count,'action')+' · '+plural(r.decision_count,'decision')
+    : plural(r.incident_count,'incident')+' · '+plural(r.hazard_count,'hazard')+' · '+plural(r.action_count,'action');
+  const wrap=document.createElement('div'); wrap.className='reg-row'; wrap.style.cursor='default';
+  wrap.innerHTML='<span style="cursor:pointer;flex:1"><span class="rr-main">'+escapeHtml(r.meeting_type||'Meeting')+' — '+escapeHtml(r.site_name||'—')+(r.archived?' <em style="color:#c02626">(archived)</em>':'')+'</span><br/>'
+    +'<span class="rr-sub">'+escapeHtml(r.meeting_date||'')+' · '+counts+'</span></span>'
+    +'<span class="reg-badge '+(r.template==='general'?'general':'safety')+'">'+(r.template==='general'?'General':'Safety')+'</span>';
+  // whole row opens the meeting (as v3 did) — except clicks on the buttons
+  wrap.addEventListener('click',e=>{ if(e.target.closest('button')) return; openMeetingView(r.id); });
+  // v4: archive is the default "remove" — hard delete only from the archived view.
+  const btn=document.createElement('button'); btn.type='button'; btn.className='ar-btn';
+  if(!r.archived){
+    btn.textContent='Archive';
+    btn.addEventListener('click',async()=>{
+      if(!window.confirm('Archive this meeting? It stays in the database and can be shown again with “Show archived”.')) return;
+      try{ const res=await apiFetch(apiBase()+'/api/meetings/'+r.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({archived:true})});
+        if(!res.ok) throw new Error(res.status);
+        reloadRegister();
+      }catch(err){ alert('Couldn’t archive ('+err.message+').'); }
+    });
+    wrap.appendChild(btn);
+  } else {
+    btn.textContent='Unarchive';
+    btn.addEventListener('click',async()=>{
+      try{ const res=await apiFetch(apiBase()+'/api/meetings/'+r.id,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({archived:false})});
+        if(!res.ok) throw new Error(res.status);
+        reloadRegister();
+      }catch(err){ alert('Couldn’t unarchive ('+err.message+').'); }
+    });
+    const del=document.createElement('button'); del.type='button'; del.className='ar-btn'; del.style.borderColor='#c02626'; del.style.color='#c02626';
+    del.textContent='Delete';
+    del.addEventListener('click',async()=>{
+      if(!window.confirm('PERMANENTLY delete this meeting and everything in it? This cannot be undone.')) return;
+      try{ const res=await apiFetch(apiBase()+'/api/meetings/'+r.id,{method:'DELETE'});
+        if(!res.ok) throw new Error(res.status);
+        reloadRegister();
+      }catch(err){ alert('Couldn’t delete ('+err.message+').'); }
+    });
+    wrap.appendChild(btn); wrap.appendChild(del);
+  }
+  return wrap;
+}
+async function loadRegisterPage(append){
+  try{
+    const res=await fetch(apiBase()+'/api/meetings?'+regQueryString());
+    if(!res.ok) throw new Error('server returned '+res.status);
+    const rows=(await res.json()).meetings||[];
+    if(!append) regList.innerHTML='';
+    rows.forEach(r=>regList.appendChild(regRowEl(r)));
+    regState.done = rows.length < REG_PAGE;
+    document.getElementById('regMore').style.display = regState.done ? 'none' : '';
+    const total=regList.children.length;
+    regStatus.textContent = total
+      ? total+' meeting'+(total===1?'':'s')+' shown — tap one to view, play back, or re-export.'
+      : 'No meetings match — finish a meeting and tap “Save to Register”, or clear the filters.';
+    // collect site names for the datalists (site history + action register)
+    const seen=new Set(); const dl1=document.getElementById('histSiteList'), dl2=document.getElementById('arSiteList');
+    rows.forEach(r=>{ if(r.site_name && !seen.has(r.site_name)){ seen.add(r.site_name);
+      [dl1,dl2].forEach(dl=>{ if(dl && ![...dl.options].some(o=>o.value===r.site_name)){ const o=document.createElement('option'); o.value=r.site_name; dl.appendChild(o); } }); } });
+  }catch(err){ regStatus.textContent='Couldn’t load the register ('+err.message+').'; }
+}
+function reloadRegister(){ regState.offset=0; loadRegisterPage(false); }
+async function openRegister(){
+  registerModal.classList.remove('hidden');
+  regStatus.textContent='Loading saved meetings…';
+  reloadRegister();
+}
+// Map a stored server meeting to the playback record shape (same fields the
+// localStorage snapshot uses — attendance deliberately never included).
+function storedToRec(m){
+  return {
+    template:m.template, meetingType:m.meeting_type, siteName:m.site_name, date:m.meeting_date, ledBy:m.led_by,
+    incidents:(m.incidents||[]).map(i=>({description:i.description, severity:i.severity, outcome:i.outcome})),
+    hazards:(m.hazards||[]).map(h=>({hazard:h.hazard, control:h.control, tier:h.control_tier})),
+    actions:(m.actions||[]).map(a=>({who:a.who, what:a.what, when:a.by_when})),
+    decisions:m.decisions||[], summary:m.summary||''
+  };
+}
+async function openMeetingView(id){
+  mvMeeting=null;
+  document.getElementById('mvTitle').textContent='Meeting #'+id;
+  document.getElementById('mvMeta').textContent='Loading…';
+  document.getElementById('mvBody').innerHTML='';
+  document.getElementById('mvStatus').textContent='';
+  meetingViewModal.classList.remove('hidden');
+  try{
+    const res=await fetch(apiBase()+'/api/meetings/'+id);
+    if(!res.ok) throw new Error('server returned '+res.status);
+    const m=await res.json(); mvMeeting=m;
+    const isGen=m.template==='general';
+    document.getElementById('mvTitle').textContent=(m.meeting_type||'Meeting')+' #'+m.id;
+    document.getElementById('mvMeta').textContent=(m.site_name||'—')+' — '+(m.meeting_date||'—')+' — led by '+(m.led_by||'—')+(isGen?' (General Meeting)':' (Safety / Toolbox Talk)');
+    let html='';
+    const sec=(t,items,fmt,empty)=>'<p style="margin:10px 0 2px"><b>'+t+'</b></p>'+((items&&items.length)?'<ul style="margin:4px 0 0;padding-left:20px">'+items.map(fmt).join('')+'</ul>':'<p style="margin:2px 0;color:#64748b">'+empty+'</p>');
+    if(!isGen){
+      html+=sec('Incidents reviewed',m.incidents,i=>'<li>'+escapeHtml(i.description)+' <em>('+escapeHtml(i.severity||'not stated')+')</em></li>','None.');
+      html+=sec('Hazards &amp; controls',m.hazards,h=>'<li>'+escapeHtml(h.hazard)+' — '+escapeHtml(h.control)+' <em>('+escapeHtml(h.control_tier)+')</em></li>','None.');
+    } else if(m.summary){
+      html+='<p style="margin:10px 0 2px"><b>Summary</b></p><p style="margin:2px 0;white-space:pre-wrap">'+escapeHtml(m.summary)+'</p>';
+    }
+    html+=sec('Actions',m.actions,a=>'<li><b>'+escapeHtml(a.who)+'</b> — '+escapeHtml(a.what)+' <em>(by '+escapeHtml(a.by_when)+')</em></li>','None.');
+    html+=sec('Decisions',m.decisions,d=>'<li>'+escapeHtml(d)+'</li>','None.');
+    if(!isGen && m.summary){
+      html+='<p style="margin:10px 0 2px"><b>Minutes summary</b></p><p style="margin:2px 0;white-space:pre-wrap">'+escapeHtml(m.summary)+'</p>';
+    }
+    html+=sec('Attendance',m.attendance,a=>'<li>'+escapeHtml(a.name)+(a.signature?' — '+escapeHtml(a.signature):'')+'</li>','None recorded.');
+    document.getElementById('mvBody').innerHTML=html;
+  }catch(err){ document.getElementById('mvMeta').textContent='Couldn’t load this meeting ('+err.message+').'; }
+}
+// Re-export a stored meeting exactly as it was saved (same document as the
+// original export because both go through the same /export/* endpoints).
+async function exportStored(kind){
+  if(!mvMeeting) return;
+  const m=mvMeeting, st=document.getElementById('mvStatus');
+  const payload={
+    template:m.template, meeting_type:m.meeting_type||'Meeting', site_name:m.site_name,
+    meeting_date:m.meeting_date, led_by:m.led_by||'', summary:m.summary||'',
+    template_id:m.template_id||null,                               // v5: spec-driven re-export
+    custom_sections:(m.extra&&m.extra.custom_sections)||{},        // v5
+    topics:(m.extra&&m.extra.topics)||[],
+    // v5 (03-A): the server resolves extra.carried_over ids into rows, so a
+    // stored meeting re-exports its carried-over section like the original.
+    carried_over:(m.extra&&m.extra.carried_over_resolved)||[],
+    incidents:(m.incidents||[]).map(i=>({description:i.description, severity:i.severity||'not stated', outcome:i.outcome||''})),
+    hazards:(m.hazards||[]).map(h=>({hazard:h.hazard, control:h.control, control_tier:h.control_tier, compliance_note:h.compliance_note, custom:(h.extra&&h.extra.custom)||null})),
+    actions:(m.actions||[]).map(a=>({who:a.who, what:a.what, by_when:a.by_when, custom:(a.extra&&a.extra.custom)||null})),
+    decisions:m.decisions||[],
+    attendance:(m.attendance||[]).map(a=>({name:a.name, signature:a.signature||''}))
+  };
+  st.textContent='Building '+(kind==='pdf'?'PDF':'Excel')+'…';
+  try{
+    const res=await fetch(apiBase()+'/export/'+kind,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!res.ok) throw new Error('server returned '+res.status);
+    const blob=await res.blob();
+    const base='minute-man-'+(payload.meeting_type||'record').toLowerCase().replace(/[^a-z0-9]+/g,'-');
+    downloadBlob(blob, base+(kind==='pdf'?'.pdf':'.xlsx'));
+    st.textContent='Downloaded.';
+  }catch(err){ st.textContent='Export failed ('+err.message+').'; }
+}
+document.getElementById('regClose').addEventListener('click',()=>registerModal.classList.add('hidden'));
+registerModal.addEventListener('click',e=>{ if(e.target===registerModal) registerModal.classList.add('hidden'); });
+// v4: register controls
+let regSearchTimer=null;
+['regSearch','regFrom','regTo'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{
+  clearTimeout(regSearchTimer); regSearchTimer=setTimeout(reloadRegister,400); }));
+document.getElementById('regArchived').addEventListener('change',reloadRegister);
+document.getElementById('regMore').addEventListener('click',()=>{ regState.offset+=REG_PAGE; loadRegisterPage(true); });
+// v4: tabs — Meetings | Site history
+document.getElementById('regTabMeetings').addEventListener('click',()=>{
+  document.getElementById('regTabMeetings').classList.add('on');
+  document.getElementById('regTabHistory').classList.remove('on');
+  document.getElementById('regMeetingsPane').classList.remove('hidden');
+  document.getElementById('regHistoryPane').classList.add('hidden');
+});
+document.getElementById('regTabHistory').addEventListener('click',()=>{
+  document.getElementById('regTabHistory').classList.add('on');
+  document.getElementById('regTabMeetings').classList.remove('on');
+  document.getElementById('regHistoryPane').classList.remove('hidden');
+  document.getElementById('regMeetingsPane').classList.add('hidden');
+});
+
+// ---------- v4: Site history (read-only — meetings, recurring hazards, incidents)
+async function showSiteHistory(){
+  const site=document.getElementById('histSite').value.trim();
+  const statusEl=document.getElementById('histStatus'), body=document.getElementById('histBody');
+  if(!site){ statusEl.textContent='Type a site name first.'; return; }
+  statusEl.textContent='Loading history for '+site+'…'; body.innerHTML='';
+  try{
+    const [mRes,hRes,iRes]=await Promise.all([
+      fetch(apiBase()+'/api/meetings?site_name='+encodeURIComponent(site)+'&limit=500'),
+      fetch(apiBase()+'/api/hazards?site_name='+encodeURIComponent(site)),
+      fetch(apiBase()+'/api/incidents?site_name='+encodeURIComponent(site)),
+    ]);
+    if(!mRes.ok||!hRes.ok||!iRes.ok) throw new Error('server error');
+    const meetings=(await mRes.json()).meetings||[];
+    const hazards=(await hRes.json()).hazards||[];
+    const incidents=(await iRes.json()).incidents||[];
+    // group hazards by normalised text (lowercase, collapsed whitespace);
+    // repeat offenders first
+    const groups=new Map();
+    hazards.forEach(h=>{
+      const key=String(h.hazard||'').toLowerCase().replace(/\s+/g,' ').trim();
+      if(!groups.has(key)) groups.set(key,{label:h.hazard, count:0, dates:[]});
+      const g=groups.get(key); g.count++; if(h.meeting_date) g.dates.push(h.meeting_date);
+    });
+    const grouped=[...groups.values()].sort((a,b)=>b.count-a.count);
+    let html='<p><b>'+plural(meetings.length,'meeting')+'</b> at this site'
+      +(meetings.length?': '+meetings.map(m=>escapeHtml(m.meeting_date||'—')).join(', '):'')+'</p>';
+    html+='<p style="margin:10px 0 2px"><b>Recurring hazards</b> ('+grouped.length+')</p>';
+    html+= grouped.length
+      ? '<ul style="padding-left:20px;margin:4px 0">'+grouped.map(g=>'<li>'+escapeHtml(g.label)
+          +' — <b>×'+g.count+'</b>'+(g.dates.length?' <em>('+g.dates.map(escapeHtml).join(', ')+')</em>':'')+'</li>').join('')+'</ul>'
+      : '<p style="color:#64748b">No hazards recorded at this site.</p>';
+    html+='<p style="margin:10px 0 2px"><b>Incidents</b> ('+incidents.length+')</p>';
+    html+= incidents.length
+      ? '<ul style="padding-left:20px;margin:4px 0">'+incidents.map(i=>'<li>'+escapeHtml(i.description)
+          +' <em>('+escapeHtml(i.severity||'not stated')+', '+escapeHtml(i.meeting_date||'—')+')</em></li>').join('')+'</ul>'
+      : '<p style="color:#64748b">No incidents recorded at this site.</p>';
+    body.innerHTML=html;
+    statusEl.textContent='History for '+site+':';
+  }catch(err){ statusEl.textContent='Couldn’t load the history ('+err.message+').'; }
+}
+document.getElementById('histGo').addEventListener('click',showSiteHistory);
+
+// ---------- v5: sites/people merge (03-C — explicit confirmation, no fuzz) ---
+// Near-duplicate candidates = rows sharing a normalised form or overlapping
+// on recorded aliases only. Renders under the Site history pane.
+function normName(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function dupeGroups(rows){
+  const groups=[];
+  for(let i=0;i<rows.length;i++) for(let j=i+1;j<rows.length;j++){
+    const a=rows[i], b=rows[j];
+    const aset=new Set([normName(a.name),...(a.aliases||[]).map(normName)]);
+    const bset=new Set([normName(b.name),...(b.aliases||[]).map(normName)]);
+    if([...aset].some(x=>bset.has(x))) groups.push([a,b]);
+  }
+  return groups;
+}
+async function renderMergeTool(){
+  const body=document.getElementById('histBody');
+  try{
+    const [sRes,pRes]=await Promise.all([fetch(apiBase()+'/api/sites'), fetch(apiBase()+'/api/people')]);
+    const sites=(await sRes.json()).sites||[], people=(await pRes.json()).people||[];
+    let html='<p style="margin:10px 0 2px"><b>α Merge duplicates</b> <span class="ar-meta">(same name/alias spellings only — nothing fuzzy)</span></p>';
+    const addRows=(kind,rows)=>{
+      const groups=dupeGroups(rows);
+      if(!groups.length) return '<p class="ar-meta">No duplicate '+kind+' detected.</p>';
+      return groups.map(([a,b])=>{
+        return '<div class="ar-row" data-kind="'+kind+'" data-src="'+b.id+'" data-tgt="'+a.id+'">'
+          +'<div style="flex:1"><div class="ar-what">'+escapeHtml(b.name)+' → '+escapeHtml(a.name)+'</div>'
+          +'<div class="ar-meta">Merge “'+escapeHtml(b.name)+'” into “'+escapeHtml(a.name)+'” ('+kind+')</div></div>'
+          +'<button type="button" class="ar-btn merge-btn">α Merge…</button></div>';
+      }).join('');
+    };
+    html+=addRows('sites',sites)+addRows('people',people);
+    const div=document.createElement('div'); div.id='mergeTool'; div.innerHTML=html;
+    const old=document.getElementById('mergeTool'); if(old) old.remove();
+    body.appendChild(div);
+    div.querySelectorAll('.merge-btn').forEach(btn=>{
+      btn.addEventListener('click',async()=>{
+        const row=btn.closest('.ar-row');
+        if(!window.confirm('Merge these '+row.dataset.kind+'? All records move to the kept name; the other becomes an alias. This can\'t be undone.')) return;
+        btn.disabled=true;
+        try{
+          const res=await apiFetch(apiBase()+'/api/'+row.dataset.kind+'/'+row.dataset.src+'/merge',{
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({into_id:Number(row.dataset.tgt)})});
+          if(!res.ok) throw new Error(res.status);
+          row.remove();
+        }catch(err){ btn.disabled=false; alert('Merge failed ('+err.message+').'); }
+      });
+    });
+  }catch(_){}
+}
+document.getElementById('regTabHistory').addEventListener('click',renderMergeTool);
+
+// ---------- v4: Action Register (cross-meeting — the headline feature) ------
+const actionRegModal=document.getElementById('actionRegModal');
+let arRows=[];
+function arQueryString(){
+  const p=new URLSearchParams();
+  p.set('status', document.getElementById('arStatus').value);
+  const s=document.getElementById('arSite').value.trim(); if(s) p.set('site_name', s);
+  const w=document.getElementById('arWho').value.trim(); if(w) p.set('who', w);
+  p.set('limit','500');
+  return p.toString();
+}
+function arFilters(){
+  return { status:document.getElementById('arStatus').value,
+           site_name:document.getElementById('arSite').value.trim()||null,
+           who:document.getElementById('arWho').value.trim()||null };
+}
+function arRowEl(a){
+  const due = a.overdue ? '<span class="ar-due overdue">OVERDUE</span>'
+    : (a.due_date ? '<span class="ar-due dated">due '+escapeHtml(a.due_date)+'</span>'
+                  : '<span class="ar-due nodate">no date</span>');
+  const div=document.createElement('div'); div.className='ar-row';
+  div.innerHTML='<div style="flex:1"><div class="ar-what">'+escapeHtml(a.what)+'</div>'
+    +'<div class="ar-meta">'+escapeHtml(a.site_name||'—')+' · '+escapeHtml(a.meeting_type||'')+' '+escapeHtml(a.meeting_date||'')
+    +' · by '+escapeHtml(a.by_when||'—')+' '+due
+    +(a.status==='closed'?' · <b>closed</b> by '+escapeHtml(a.closed_by||'—'):'')+'</div></div>';
+  const btn=document.createElement('button'); btn.type='button'; btn.className='ar-btn';
+  if(a.status==='open'){
+    btn.classList.add('close-btn'); btn.textContent='✓ Close';
+    btn.addEventListener('click',async()=>{
+      if(!window.confirm('Mark this action as closed?\n\n'+a.what)) return;
+      const closedBy=askClosedBy();
+      btn.disabled=true;
+      try{
+        const res=await apiFetch(apiBase()+'/api/actions/'+a.id,{method:'PATCH',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({status:'closed', closed_by:closedBy})});
+        if(!res.ok) throw new Error(res.status);
+        loadActionRegister();
+      }catch(err){ btn.disabled=false; alert('Couldn’t close it ('+err.message+').'); }
+    });
+  } else {
+    btn.textContent='↺ Reopen';
+    btn.addEventListener('click',async()=>{
+      try{
+        const res=await apiFetch(apiBase()+'/api/actions/'+a.id,{method:'PATCH',
+          headers:{'Content-Type':'application/json'}, body:JSON.stringify({status:'open'})});
+        if(!res.ok) throw new Error(res.status);
+        loadActionRegister();
+      }catch(err){ alert('Couldn’t reopen it ('+err.message+').'); }
+    });
+  }
+  div.appendChild(btn);
+  return div;
+}
+function renderActionRegister(){
+  const list=document.getElementById('arList'); list.innerHTML='';
+  const search=document.getElementById('arSearch').value.trim().toLowerCase();
+  const rows=search ? arRows.filter(a=>String(a.what).toLowerCase().includes(search)) : arRows;
+  const line=document.getElementById('arStatusLine');
+  if(!rows.length){ line.textContent='No actions match.'; return; }
+  const overdueCount=rows.filter(a=>a.overdue).length;
+  line.textContent=plural(rows.length,'action')+(overdueCount?' — '+overdueCount+' OVERDUE':'');
+  // grouped by person; unassigned first, labelled as the engine writes it
+  const groups=new Map();
+  rows.forEach(a=>{
+    const key=(a.who&&a.who.trim())?a.who.trim():'Unassigned — needs an owner';
+    if(!groups.has(key)) groups.set(key,[]);
+    groups.get(key).push(a);
+  });
+  const names=[...groups.keys()].sort((x,y)=>{
+    const ux=x==='Unassigned — needs an owner', uy=y==='Unassigned — needs an owner';
+    if(ux!==uy) return ux?-1:1;
+    return x.localeCompare(y);
+  });
+  names.forEach(name=>{
+    const h=document.createElement('div'); h.className='ar-group'; h.textContent=name;
+    list.appendChild(h);
+    groups.get(name).forEach(a=>list.appendChild(arRowEl(a)));
+  });
+}
+async function loadActionRegister(){
+  document.getElementById('arStatusLine').textContent='Loading…';
+  try{
+    const res=await fetch(apiBase()+'/api/actions?'+arQueryString());
+    if(!res.ok) throw new Error('server returned '+res.status);
+    arRows=(await res.json()).actions||[];
+    renderActionRegister();
+  }catch(err){ document.getElementById('arStatusLine').textContent='Couldn’t load the register ('+err.message+').'; }
+}
+function openActionRegister(){ actionRegModal.classList.remove('hidden'); loadActionRegister(); }
+document.getElementById('arClose').addEventListener('click',()=>actionRegModal.classList.add('hidden'));
+actionRegModal.addEventListener('click',e=>{ if(e.target===actionRegModal) actionRegModal.classList.add('hidden'); });
+['arStatus','arSite','arWho'].forEach(id=>document.getElementById(id).addEventListener('change',loadActionRegister));
+let arSearchTimer=null;
+document.getElementById('arSearch').addEventListener('input',()=>{ clearTimeout(arSearchTimer); arSearchTimer=setTimeout(renderActionRegister,250); });
+document.getElementById('arExport').addEventListener('click',async()=>{
+  const btn=document.getElementById('arExport'); const label=btn.innerHTML;
+  btn.disabled=true; btn.innerHTML='Building Excel…';
+  try{
+    const res=await fetch(apiBase()+'/export/actions.xlsx',{method:'POST',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify(arFilters())});
+    if(!res.ok) throw new Error('server returned '+res.status);
+    downloadBlob(await res.blob(), 'minute-man-action-register.xlsx');
+  }catch(err){ alert('Export failed ('+err.message+').'); }
+  btn.disabled=false; btn.innerHTML=label;
+});
+document.getElementById('mvClose').addEventListener('click',()=>meetingViewModal.classList.add('hidden'));
+meetingViewModal.addEventListener('click',e=>{ if(e.target===meetingViewModal) meetingViewModal.classList.add('hidden'); });
+document.getElementById('mvPlay').addEventListener('click',()=>{ if(mvMeeting) openPlaybackFor(storedToRec(mvMeeting)); });
+document.getElementById('mvPdf').addEventListener('click',()=>exportStored('pdf'));
+document.getElementById('mvXlsx').addEventListener('click',()=>exportStored('excel'));
+
+// ---------- Home / front door + install ------------------------------------
+function enterApp(screen){ document.body.classList.remove('home-mode'); show(screen||1); }
+function goHome(){ document.body.classList.add('home-mode'); window.scrollTo({top:0}); refreshHomePrev(); }
+document.getElementById('homeNew').addEventListener('click',()=>enterApp(1));
+document.getElementById('homeSettings').addEventListener('click',openSettings);
+document.getElementById('homeLogo').addEventListener('click',goHome);
+document.getElementById('homePrev').addEventListener('click',openPlayback);
+document.getElementById('homeRegister').addEventListener('click',openRegister);
+document.getElementById('homeActions').addEventListener('click',openActionRegister);
+document.getElementById('pbStop').addEventListener('click',stopPlayback);
+document.getElementById('pbNew').addEventListener('click',()=>{ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); enterApp(1); });
+document.getElementById('playbackModal').addEventListener('click',e=>{ if(e.target===e.currentTarget){ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); } });
+refreshHomePrev();
+// v5: template upload is server-backed — online only.
+document.getElementById('tplUploadRow').style.display = backendConfigured() ? '' : 'none';
+if(backendConfigured()) refreshTemplates();
+// Version stamp on the front door — makes it obvious which build is live.
+{ const v=document.getElementById('appVer'); if(v) v.textContent = 'v'+APP_VERSION+(backendConfigured()? '' : ' · offline demo'); }
+
+// Add-to-Home-Screen: iPhone shows instructions; Android offers a native prompt.
+const a2hs=document.getElementById('a2hs');
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
+const isiOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  a2hs.style.display='block';
+  a2hs.innerHTML='<b>Install Minute Man</b> as an app on your phone. <button id="installBtn" class="btn-second" style="min-height:40px;margin-top:8px;width:100%">Install app</button>';
+  document.getElementById('installBtn').addEventListener('click',()=>{ a2hs.style.display='none'; deferredPrompt.prompt(); deferredPrompt=null; });
+});
+if(isiOS && !isStandalone){
+  a2hs.style.display='block';
+  a2hs.innerHTML='<b>Get the app feel:</b> tap the Share button <span class="share-ic">⬆</span> at the bottom of Safari, then <b>“Add to Home Screen.”</b> Minute Man then opens fullscreen with its own icon.';
+}
+</script>
+</body>
+</html>
