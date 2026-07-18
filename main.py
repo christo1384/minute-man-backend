@@ -1,35 +1,35 @@
 """
-Minute Man — FastAPI backend. v4.0 "Registers": cross-meeting intelligence.
+Minute Man — FastAPI backend. v5.0 "Templates": bring-your-own spreadsheet.
 
-Endpoints:
-  GET    /api/health           -> liveness (+ database, schema_version, counts)
-  POST   /api/minutes          -> transcript in, structured minutes out
-                                  (template = "safety" (default) | "general";
-                                   v4: echoes provider_used)
-  POST   /api/meetings         -> save a full confirmed meeting (v4: accepts
-                                  carried_over ids; matches sites/people)
-  GET    /api/meetings         -> list, newest first (v4: q search, offset,
-                                  include_archived)
-  GET    /api/meetings/{id}    -> one full meeting with all children
-  PATCH  /api/meetings/{id}    -> v4: archive / unarchive (soft delete)
-  DELETE /api/meetings/{id}    -> hard delete (kept; UI default is archive)
-  GET    /api/actions          -> v4: cross-meeting action register w/ filters
-  PATCH  /api/actions/{id}     -> v4: close / reopen an action
-  GET    /api/hazards          -> v4: hazard history w/ meeting context
-  GET    /api/incidents        -> v4: incident history w/ meeting context
-  POST   /export/pdf|excel     -> exports (from export_routes)
-  POST   /export/actions.xlsx  -> v4: filtered action-register export
+v5 additions on top of v4 "Registers":
+  POST   /api/templates          -> upload a template (JSON: filename +
+                                    base64 content) -> parsed TemplateSpec
+  GET    /api/templates          -> list (builtins + uploads)
+  GET    /api/templates/{id}     -> one, with spec
+  PATCH  /api/templates/{id}     -> rename / archive / correct the spec
+  GET    /api/sites, /api/people -> canonical rows incl. near-duplicate groups
+  POST   /api/sites/{id}/merge   -> merge into another site  ({"into_id": n})
+  POST   /api/people/{id}/merge  -> merge into another person
+  /api/minutes                   -> accepts template_id (uploaded templates get
+                                    a dynamic prompt: curated core rules +
+                                    injection-guarded template additions)
+  /api/meetings                  -> stores template_id, custom row fields and
+                                    custom sections; GET resolves carried-over
+                                    ids to rows (extra.carried_over_resolved)
+v4 endpoints (all unchanged): /api/health, /api/minutes, /api/meetings
+(POST/GET/GET{id}/PATCH/DELETE), /api/actions (GET/PATCH), /api/hazards,
+/api/incidents, /export/pdf|excel, /export/actions.xlsx.
 
 Optional write protection: set env MM_API_KEY and every POST/PATCH/DELETE
 under /api/ requires header X-API-Key (GETs and /api/health stay open).
-Unset (the default), behaviour is identical to v3.
+Unset (the default), behaviour is identical to keyless v4.
 
 Run locally:
   uvicorn main:app --reload --port 8080
 
 Database: DATABASE_URL env (SQLite default). On startup db.init_db()
-self-migrates a v3 database to schema v2 in place — additive only, existing
-rows untouched. See db.py / alembic/versions/0001….py.
+self-migrates any older database to the current schema in place — additive
+only, existing rows untouched. See db.py / alembic/versions/.
 """
 
 import os
@@ -58,7 +58,7 @@ from db import get_schema_version, get_session, init_db, SessionLocal
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("minute-man")
 
-APP_VERSION = "4.0.0"
+APP_VERSION = "5.0.0"
 
 
 def require_write_key(x_api_key: str | None = Header(None, alias="X-API-Key")):
@@ -127,6 +127,7 @@ class MinutesRequest(BaseModel):
     led_by: Optional[str] = ""
     provider: Optional[str] = None  # "anthropic" | "gemini" | "openai" | "demo"; falls back to DEFAULT_PROVIDER
     template: Literal["safety", "general"] = "safety"  # v3; default keeps v2.2 behaviour
+    template_id: Optional[int] = None  # v5: a templates-table row; uploads get a dynamic prompt
     attendance: List[AttendanceEntry] = []
 
 
@@ -137,10 +138,11 @@ def health_check(session: Session = Depends(get_session)):
         meetings_stored = crud.count_meetings(session)
         sites = crud.count_sites(session)
         people = crud.count_people(session)
+        templates_stored = crud.count_templates(session)
         database = "ok"
     except Exception:
         logger.exception("Health check: database error")
-        meetings_stored = sites = people = 0
+        meetings_stored = sites = people = templates_stored = 0
         database = "error"
     return {
         "status": "ok",
@@ -154,6 +156,7 @@ def health_check(session: Session = Depends(get_session)):
         "schema_version": get_schema_version() if database == "ok" else None,
         "sites": sites,
         "people": people,
+        "templates_stored": templates_stored,
         "api_key_required": bool(os.getenv("MM_API_KEY")),
     }
 
@@ -169,8 +172,33 @@ def make_minutes(req: MinutesRequest):
       general — template, metadata, summary, topics, actions, decisions,
                 attendance. No hazards, no incidents.
     """
+    # v5: resolve template_id. Builtin rows route to the dedicated v4 paths
+    # (regression-identical); uploaded rows get the dynamic spec-driven prompt.
+    template_kind = req.template
+    template_spec = None
+    tpl_row = None
+    if req.template_id is not None:
+        with SessionLocal() as _s:
+            tpl_row = crud.get_template(_s, req.template_id)
+            if tpl_row is None:
+                raise HTTPException(status_code=404,
+                                    detail=f"No template with id {req.template_id}.")
+            if tpl_row.archived:
+                raise HTTPException(status_code=400,
+                                    detail="That template is archived — unarchive it "
+                                           "or pick another before generating minutes.")
+            builtin_key = (tpl_row.extra or {}).get("builtin_key")
+            if builtin_key in ("safety", "general"):
+                template_kind = builtin_key
+            else:
+                template_spec = tpl_row.spec or {}
+                has_haz = any(s.get("kind") == "hazards"
+                              for s in template_spec.get("sections", []))
+                template_kind = "safety" if has_haz else "general"
+
     try:
-        extracted = extract_minutes(req.transcript, req.provider, req.template)
+        extracted = extract_minutes(req.transcript, req.provider, template_kind,
+                                    template_spec=template_spec)
     except KeyError as exc:
         # Missing API key for the chosen provider.
         raise HTTPException(
@@ -191,7 +219,7 @@ def make_minutes(req: MinutesRequest):
     # Merge the model's output with the app-supplied metadata and attendance
     # (which never comes from the model).
     common = {
-        "template": req.template,
+        "template": template_kind,
         "meeting_type": req.meeting_type,
         "site_name": req.site_name,
         "meeting_date": req.meeting_date,
@@ -201,11 +229,15 @@ def make_minutes(req: MinutesRequest):
         "decisions": extracted.get("decisions", []),
         "attendance": [a.model_dump() for a in req.attendance],
     }
-    if req.template == "general":
+    if template_kind == "general":
         # General template: summary/topics/actions/decisions — deliberately NO
         # hazards or incidents keys at all.
         common["topics"] = extracted.get("topics", [])
         common["provider_used"] = provider_used  # v4
+        if req.template_id is not None:
+            common["template_id"] = req.template_id  # v5
+            if extracted.get("custom_sections"):
+                common["custom_sections"] = extracted["custom_sections"]
         return common
 
     # Safety (default): the v2.2 shape plus incidents + summary. Validating
@@ -213,6 +245,8 @@ def make_minutes(req: MinutesRequest):
     # this response can be POSTed straight to /export/pdf|excel or /api/meetings.
     payload = MinutesExportRequest(
         **common,
+        template_id=req.template_id,                              # v5
+        custom_sections=extracted.get("custom_sections") or {},   # v5
         incidents=extracted.get("incidents", []),
         hazards=extracted.get("hazards", []),
     )
@@ -239,6 +273,7 @@ class MeetingHazardIn(BaseModel):
     control: str = ""
     control_tier: str = ""
     compliance_note: str = ""
+    custom: Optional[dict] = None  # v5: uploaded-template extra columns
 
 
 class MeetingActionIn(BaseModel):
@@ -248,6 +283,7 @@ class MeetingActionIn(BaseModel):
     # v4: set when the leader "re-commits" a carried-over action into this
     # meeting — creates a fresh row linked back to the original meeting.
     carried_from_meeting_id: Optional[int] = None
+    custom: Optional[dict] = None  # v5: uploaded-template extra columns
 
 
 class MeetingSaveRequest(BaseModel):
@@ -274,6 +310,10 @@ class MeetingSaveRequest(BaseModel):
     # as still outstanding — recorded in the meeting's extra JSON, never
     # duplicated as new action rows.
     carried_over: List[int] = []
+    # v5: which templates-table row drove this meeting, and any custom-section
+    # rows extracted for an uploaded template (stored in extra, register-exempt).
+    template_id: Optional[int] = None
+    custom_sections: dict = Field(default_factory=dict)
 
 
 @app.post("/api/meetings", status_code=200, dependencies=[Depends(require_write_key)])
@@ -285,7 +325,7 @@ def save_meeting(req: MeetingSaveRequest, session: Session = Depends(get_session
         logger.exception("Saving meeting failed")
         raise HTTPException(status_code=500, detail=f"Could not save the meeting: {exc}")
     saved = crud.get_meeting(session, meeting.id)
-    return crud.meeting_to_dict(saved)
+    return crud.meeting_to_dict(saved, session)
 
 
 @app.get("/api/meetings")
@@ -333,7 +373,7 @@ def get_meeting(meeting_id: int, session: Session = Depends(get_session)):
     m = crud.get_meeting(session, meeting_id)
     if m is None:
         raise HTTPException(status_code=404, detail=f"No meeting with id {meeting_id}.")
-    return crud.meeting_to_dict(m)
+    return crud.meeting_to_dict(m, session)  # v5: resolves carried-over ids
 
 
 @app.delete("/api/meetings/{meeting_id}", dependencies=[Depends(require_write_key)])
@@ -423,6 +463,111 @@ def list_incidents(
     rows = crud.list_incidents(session, site_name=site_name, date_from=date_from,
                                date_to=date_to, limit=limit)
     return {"incidents": rows, "count": len(rows)}
+
+
+# ---------------------------------------------------------------------------
+# v5 — templates
+# ---------------------------------------------------------------------------
+class TemplateUpload(BaseModel):
+    """JSON upload (filename + base64) — deliberately NOT multipart so no new
+    dependency (python-multipart) is needed; the front-end reads the file
+    with FileReader and posts it here."""
+
+    filename: str
+    content_base64: str
+    name: Optional[str] = None  # display name; defaults to the filename stem
+
+
+@app.post("/api/templates", dependencies=[Depends(require_write_key)])
+def upload_template(req: TemplateUpload, session: Session = Depends(get_session)):
+    import base64
+
+    from template_engine import TemplateError, parse_template
+
+    try:
+        content = base64.b64decode(req.content_base64)
+    except Exception:
+        raise HTTPException(status_code=400, detail="The file upload was corrupted — try again.")
+    try:
+        spec, warnings = parse_template(req.filename, content)
+    except TemplateError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    name = (req.name or "").strip() or \
+        os.path.splitext(os.path.basename(req.filename))[0].replace("-", " ").replace("_", " ").strip()
+    t = crud.create_template(session, name=name[:120], spec=spec,
+                             original_filename=req.filename[:255])
+    return {"template": crud.template_to_dict(t), "spec": spec, "warnings": warnings}
+
+
+@app.get("/api/templates")
+def list_templates(include_archived: bool = Query(False),
+                   session: Session = Depends(get_session)):
+    return {"templates": crud.list_templates(session, include_archived=include_archived)}
+
+
+@app.get("/api/templates/{template_id}")
+def get_template(template_id: int, session: Session = Depends(get_session)):
+    t = crud.get_template(session, template_id)
+    if t is None:
+        raise HTTPException(status_code=404, detail=f"No template with id {template_id}.")
+    return crud.template_to_dict(t)
+
+
+class TemplatePatch(BaseModel):
+    name: Optional[str] = None
+    archived: Optional[bool] = None
+    spec: Optional[dict] = None  # mapping-review corrections PATCH the stored spec
+
+
+@app.patch("/api/templates/{template_id}", dependencies=[Depends(require_write_key)])
+def patch_template(template_id: int, req: TemplatePatch,
+                   session: Session = Depends(get_session)):
+    if req.name is None and req.archived is None and req.spec is None:
+        raise HTTPException(status_code=422, detail="Nothing to change.")
+    try:
+        t = crud.update_template(session, template_id, name=req.name,
+                                 archived=req.archived, spec=req.spec)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    if t is None:
+        raise HTTPException(status_code=404, detail=f"No template with id {template_id}.")
+    return crud.template_to_dict(t)
+
+
+# ---------------------------------------------------------------------------
+# v5 — sites/people lists + merge (03-C). No fuzzy matching: near-duplicate
+# candidates share a normalised form or overlap on recorded aliases only.
+# ---------------------------------------------------------------------------
+@app.get("/api/sites")
+def get_sites(session: Session = Depends(get_session)):
+    return {"sites": crud.list_sites(session)}
+
+
+@app.get("/api/people")
+def get_people(session: Session = Depends(get_session)):
+    return {"people": crud.list_people(session)}
+
+
+class MergeRequest(BaseModel):
+    into_id: int
+
+
+@app.post("/api/sites/{site_id}/merge", dependencies=[Depends(require_write_key)])
+def merge_site(site_id: int, req: MergeRequest, session: Session = Depends(get_session)):
+    result = crud.merge_sites(session, site_id, req.into_id)
+    if result is None:
+        raise HTTPException(status_code=404,
+                            detail="Unknown site id (or trying to merge a site into itself).")
+    return result
+
+
+@app.post("/api/people/{person_id}/merge", dependencies=[Depends(require_write_key)])
+def merge_person(person_id: int, req: MergeRequest, session: Session = Depends(get_session)):
+    result = crud.merge_people(session, person_id, req.into_id)
+    if result is None:
+        raise HTTPException(status_code=404,
+                            detail="Unknown person id (or trying to merge a person into themselves).")
+    return result
 
 
 # ---------------------------------------------------------------------------

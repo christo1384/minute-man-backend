@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
-SCHEMA_VERSION = 2  # v4 "Registers" — sites/people, soft delete, action register columns
+SCHEMA_VERSION = 3  # v5 "Templates" — templates table, template_id, parsed meeting dates
 
 # sqlite:///./minuteman.db  →  a file called minuteman.db next to main.py.
 DEFAULT_DB_URL = "sqlite:///./minuteman.db"
@@ -109,6 +109,7 @@ def init_db() -> None:
             else:
                 existing.schema_version = SCHEMA_VERSION
             session.commit()
+        _seed_builtin_templates()
         return
 
     # Existing database — migrate in place (no-op when already at head).
@@ -118,6 +119,30 @@ def init_db() -> None:
     # Belt-and-braces: create_all() also adds any table that somehow doesn't
     # exist yet (no-op otherwise) — it never alters existing tables.
     Base.metadata.create_all(engine)
+    _seed_builtin_templates()  # no-op when the builtin rows already exist
+
+
+def _seed_builtin_templates() -> None:
+    """Insert the two builtin template rows if missing (v5). The 0002
+    migration seeds them for upgraded databases; this covers fresh installs
+    and is a no-op everywhere else."""
+    from models import Template
+    from template_specs import BUILTIN_TEMPLATES
+
+    with SessionLocal() as session:
+        existing_keys = {
+            (t.extra or {}).get("builtin_key")
+            for t in session.execute(select(Template).where(
+                Template.source_kind == "builtin")).scalars()
+        }
+        changed = False
+        for name, key, spec in BUILTIN_TEMPLATES:
+            if key not in existing_keys:
+                session.add(Template(name=name, source_kind="builtin", spec=spec,
+                                     archived=False, extra={"builtin_key": key}))
+                changed = True
+        if changed:
+            session.commit()
 
 
 def get_schema_version() -> int | None:

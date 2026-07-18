@@ -1,5 +1,15 @@
 """
-Minute Man v4 — SQLAlchemy models (schema version 2).
+Minute Man v5 — SQLAlchemy models (schema version 3).
+
+Schema v3 delta over v2 (ADDITIVE — see alembic/versions/0002…py):
+  * New table `templates` — builtin + uploaded meeting templates; the parsed
+    TemplateSpec lives in `spec` JSON (parsed once at upload, never re-parsed
+    at meeting time).
+  * meetings.template_id (FK templates, nullable) — the free-text `template`
+    column stays for backward compat; both are written.
+  * meetings.meeting_date_parsed (Date, nullable) — unambiguous parse of the
+    free-text meeting_date (dates.py rules, never guessed) so registers can
+    sort/filter SQL-side.
 
 Schema v2 delta over v1 (all ADDITIVE — see alembic/versions/0001…py for the
 in-place migration of live v3 databases):
@@ -94,13 +104,34 @@ class Person(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
+class Template(Base):
+    """v3 — meeting templates: the two builtins plus user uploads. `spec` is
+    the parsed TemplateSpec (02-TEMPLATE-UPLOAD-SPEC) — structure only, never
+    workbook data rows, never attendee names."""
+
+    __tablename__ = "templates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(120), nullable=False)
+    source_kind: Mapped[str] = mapped_column(String(20), nullable=False)  # "builtin" | "uploaded"
+    spec: Mapped[dict] = mapped_column(JSON, default=dict)
+    original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    extra: Mapped[dict] = mapped_column(JSON, default=dict)  # builtins carry {"builtin_key": "safety"|"general"}
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class Meeting(Base):
     """One row per meeting — the parent record."""
 
     __tablename__ = "meetings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    template: Mapped[str] = mapped_column(String(20), nullable=False, index=True)  # "safety" | "general"
+    template: Mapped[str] = mapped_column(String(20), nullable=False, index=True)  # "safety" | "general" (kept for back-compat)
+    template_id: Mapped[int | None] = mapped_column(
+        ForeignKey("templates.id"), nullable=True, index=True)  # v3: which template row drove this meeting
+    meeting_date_parsed: Mapped[date | None] = mapped_column(
+        Date, nullable=True, index=True)  # v3: unambiguous parse of meeting_date (dates.py)
     meeting_type: Mapped[str | None] = mapped_column(String(100))  # display label, e.g. "Toolbox Talk"
     site_name: Mapped[str | None] = mapped_column(String(200), index=True)
     site_id: Mapped[int | None] = mapped_column(

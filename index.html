@@ -267,6 +267,20 @@
           <span class="tpl-d">Summary of the discussion, actions with owners, decisions. No hazard analysis.</span>
         </button>
       </div>
+      <!-- v5: uploaded templates appear here; upload adds a new one -->
+      <div class="tpl-grid" id="tplUploads" style="margin-top:12px"></div>
+      <div class="row noprint" id="tplUploadRow" style="margin-top:12px;display:none">
+        <button type="button" class="chip" id="tplUploadBtn">📄 Upload template…</button>
+        <span class="meta" id="tplUploadStatus"></span>
+        <input type="file" id="tplFile" accept=".xlsx,.csv,.xls" class="hidden" />
+      </div>
+      <!-- v5: mapping review card (one screen, plain language) -->
+      <div class="card hidden" id="mapCard" style="margin-top:12px;border-color:var(--orange)">
+        <h2>How I read your template</h2>
+        <p class="sub">Check each sheet was understood correctly — fix any that weren't, then you're done. Your spreadsheet's rows were treated as examples only; nothing from them is stored.</p>
+        <div id="mapList"></div>
+        <p class="savefeed" id="mapStatus"></p>
+      </div>
     </div>
 
     <div class="card">
@@ -457,6 +471,11 @@
           <div class="notes" contenteditable id="shSummary"></div>
         </div>
 
+        <div class="sect hidden" id="customSect">
+          <h3 id="customHeading">Custom Sections</h3>
+          <div id="customBody"></div>
+        </div>
+
         <div class="sect" id="notesSect">
           <h3>Discussion Notes</h3>
           <div class="notes" contenteditable id="shNotes"></div>
@@ -620,7 +639,7 @@
 //                   Calls go to /api/minutes on the same address — no CORS, nothing to edit.
 //   "https://..." → a separate backend at that URL (e.g. Cloudflare page + Render backend).
 const BACKEND_URL = "SAME_ORIGIN";
-const APP_VERSION = "4.0";
+const APP_VERSION = "5.0";
 const backendConfigured = () => BACKEND_URL !== "";
 const apiBase = () => BACKEND_URL === "SAME_ORIGIN" ? "" : BACKEND_URL.replace(/\/+$/, "");
 // Wake the backend the moment the page opens (free hosting sleeps when idle,
@@ -635,7 +654,9 @@ const DEFAULT_CREW = ["Shane Adams","Pony Kenatale","Eddie M","Brian Smith","Mil
 const state = { selected:new Set(), signatures:{}, template:"safety", meetingType:"Toolbox Talk", siteName:"", date:"", ledBy:"", decisions:[], usingBackend:false, extraction:null, lastSavedId:null,
   carriedOver:[],      // v4: open actions from previous meetings at this site (register rows)
   providerUsed:"",     // v4: echoed by /api/minutes
-  closedByName:"" };   // v4: remembered once per session for the Close flow
+  closedByName:"",     // v4: remembered once per session for the Close flow
+  templateId:null,     // v5: templates-table row driving this meeting (uploads)
+  templateSpec:null }; // v5: its TemplateSpec (labels for custom rendering)
 
 // ---------------------------------------------------------------------------
 // v4: write requests go through apiFetch, which handles the OPTIONAL register
@@ -695,6 +716,7 @@ async function fetchMinutesFromBackend(){
     meeting_date: state.date,
     led_by: state.ledBy,
     template: state.template,   // v3: "safety" | "general"
+    template_id: state.templateId,  // v5: uploaded template row (null for builtins)
     attendance
   };
   const res = await apiFetch(apiBase()+'/api/minutes',{
@@ -716,12 +738,33 @@ function normalizeMinutes(m){
     site: m.site_name || state.siteName,
     led: state.ledBy,
     incidents: (m.incidents||[]).map(i=>({description:i.description, severity:i.severity||'not stated', outcome:i.outcome||''})),
-    hazards: (m.hazards||[]).map(h=>({hazard:h.hazard, control:h.control, tier:h.control_tier, note:h.compliance_note})),
-    actions: (m.actions||[]).map(a=>({who:a.who, what:a.what, when:a.by_when})),
+    hazards: (m.hazards||[]).map(h=>({hazard:h.hazard, control:h.control, tier:h.control_tier, note:h.compliance_note, custom:h.custom||null})),
+    actions: (m.actions||[]).map(a=>({who:a.who, what:a.what, when:a.by_when, custom:a.custom||null})),
     decisions: m.decisions||[],
     summary: m.summary||'',
-    topics: m.topics||[]
+    topics: m.topics||[],
+    customSections: m.custom_sections||{}   // v5
   };
+}
+// v5: label lookups from the selected template's spec, for generic rendering
+function customColLabels(kind){
+  const spec=state.templateSpec; if(!spec) return {};
+  const s=(spec.sections||[]).find(x=>x.kind===kind); if(!s) return {};
+  const out={};
+  (s.columns||[]).forEach(c=>{ if(!c.maps_to && c.key) out[c.key]=c.label; });
+  return out;
+}
+function customSectionDefs(){
+  const spec=state.templateSpec; if(!spec) return [];
+  return (spec.sections||[]).filter(s=>s.kind==='custom');
+}
+function snakeTitle(t){ return String(t||'').toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'')||'custom'; }
+function customPairsHtml(custom, kind){
+  if(!custom) return '';
+  const labels=customColLabels(kind);
+  const bits=Object.entries(custom).filter(([,v])=>v!=null&&v!=='')
+    .map(([k,v])=>escapeHtml(labels[k]||k)+': '+escapeHtml(v));
+  return bits.length?' <em>('+bits.join(' · ')+')</em>':'';
 }
 
 (function(){ const d=new Date(); const nz=d.toLocaleDateString('en-NZ',{day:'numeric',month:'long',year:'numeric'});
@@ -908,15 +951,122 @@ async function checkCarryOver(){
 function scheduleCarryCheck(){ clearTimeout(carryTimer); carryTimer=setTimeout(checkCarryOver, 500); }
 document.getElementById('siteName').addEventListener('input',scheduleCarryCheck);
 
+// ---------- v5: uploaded templates — list / upload / mapping review ---------
+// The picker keeps the two builtin cards and adds a card per uploaded
+// template (server-backed, so online only). state.templateId travels through
+// /api/minutes, the saved meeting, and exports so the output looks like the
+// spreadsheet the user uploaded.
+const KIND_LABELS={summary:'Meeting details (key–value)',hazards:'Hazards & controls (full HSWA rules)',
+  actions:'Action register',decisions:'Decisions',attendance:'Attendance / sign-on (never sent to the AI)',
+  incidents:'Incidents reviewed',custom:'Custom section (extracted generically)'};
+let uploadedTemplates=[];
+function renderTemplateCards(){
+  const grid=document.getElementById('tplUploads'); grid.innerHTML='';
+  uploadedTemplates.forEach(t=>{
+    const b=document.createElement('button'); b.type='button'; b.className='tpl';
+    b.dataset.tid=t.id;
+    b.innerHTML='<span class="tpl-ic">📄</span><span class="tpl-t">'+escapeHtml(t.name)+'</span>'
+      +'<span class="tpl-d">Your uploaded template'+(t.original_filename?' ('+escapeHtml(t.original_filename)+')':'')+'.</span>';
+    b.addEventListener('click',()=>selectUploadedTemplate(t));
+    grid.appendChild(b);
+  });
+}
+async function refreshTemplates(){
+  if(!backendConfigured()) return;
+  try{
+    const res=await fetch(apiBase()+'/api/templates');
+    if(!res.ok) return;
+    uploadedTemplates=((await res.json()).templates||[]).filter(t=>t.source_kind==='uploaded');
+    renderTemplateCards();
+  }catch(_){}
+}
+function clearTemplateSelection(){
+  state.templateId=null; state.templateSpec=null;
+  document.querySelectorAll('#tplUploads .tpl').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('mapCard').classList.add('hidden');
+}
+function selectUploadedTemplate(t, warnings){
+  state.templateId=t.id; state.templateSpec=t.spec||null;
+  // an uploaded template behaves as safety when it has a hazards sheet
+  const hasHaz=(t.spec&&t.spec.sections||[]).some(s=>s.kind==='hazards');
+  setTemplate(hasHaz?'safety':'general', true);
+  document.querySelectorAll('#tplUploads .tpl').forEach(b=>b.classList.toggle('sel', Number(b.dataset.tid)===t.id));
+  tplSafetyBtn.classList.remove('sel'); tplGeneralBtn.classList.remove('sel');
+  renderMappingCard(t, warnings||[]);
+}
+function renderMappingCard(t, warnings){
+  const card=document.getElementById('mapCard'), list=document.getElementById('mapList');
+  card.classList.remove('hidden'); list.innerHTML='';
+  (t.spec&&t.spec.sections||[]).forEach((s,idx)=>{
+    const row=document.createElement('div'); row.className='ar-row';
+    const customCols=(s.columns||[]).filter(c=>!c.maps_to&&s.kind!=='custom').map(c=>c.label);
+    let sub='';
+    if(customCols.length) sub='Extra columns kept as custom fields: '+customCols.map(escapeHtml).join(', ');
+    row.innerHTML='<div style="flex:1"><div class="ar-what">Sheet “'+escapeHtml(s.title)+'”</div>'
+      +'<div class="ar-meta">'+(sub?escapeHtml('')+sub:'')+'</div></div>';
+    const sel=document.createElement('select'); sel.style.minHeight='36px'; sel.style.maxWidth='46%';
+    Object.keys(KIND_LABELS).forEach(k=>{
+      const o=document.createElement('option'); o.value=k; o.textContent='Read as: '+KIND_LABELS[k];
+      if(k===s.kind) o.selected=true;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change',async()=>{
+      const spec=JSON.parse(JSON.stringify(t.spec)); spec.sections[idx].kind=sel.value;
+      if(sel.value==='attendance') spec.sections[idx].ai=false;
+      const st=document.getElementById('mapStatus');
+      try{
+        const res=await apiFetch(apiBase()+'/api/templates/'+t.id,{method:'PATCH',
+          headers:{'Content-Type':'application/json'}, body:JSON.stringify({spec})});
+        if(!res.ok) throw new Error(res.status);
+        t.spec=spec; state.templateSpec=spec;
+        st.textContent='✓ Saved — “'+s.title+'” will now be read as: '+KIND_LABELS[sel.value];
+        st.className='savefeed ok';
+      }catch(err){ st.textContent='✕ Couldn’t save that correction ('+err.message+').'; st.className='savefeed err'; }
+    });
+    row.appendChild(sel);
+    list.appendChild(row);
+  });
+  if(warnings.length){
+    const w=document.createElement('p'); w.className='meta';
+    w.innerHTML='<b>Heads-up — I guessed these:</b><br/>'+warnings.map(escapeHtml).join('<br/>');
+    list.appendChild(w);
+  }
+}
+document.getElementById('tplUploadBtn').addEventListener('click',()=>document.getElementById('tplFile').click());
+document.getElementById('tplFile').addEventListener('change',async e=>{
+  const file=e.target.files && e.target.files[0];
+  if(!file) return;
+  const st=document.getElementById('tplUploadStatus'); st.textContent='Reading '+file.name+'…';
+  const reader=new FileReader();
+  reader.onload=async()=>{
+    const b64=String(reader.result).split(',')[1]||'';
+    try{
+      const res=await apiFetch(apiBase()+'/api/templates',{method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({filename:file.name, content_base64:b64})});
+      const j=await res.json();
+      if(!res.ok) throw new Error(j.detail||res.status);
+      st.textContent='✓ Template added.';
+      await refreshTemplates();
+      const t=uploadedTemplates.find(x=>x.id===j.template.id)||j.template;
+      t.spec=j.spec;
+      selectUploadedTemplate(t, j.warnings||[]);
+    }catch(err){ st.textContent='✕ '+String(err.message||err).slice(0,160); }
+    e.target.value='';
+  };
+  reader.readAsDataURL(file);
+});
+
 // ---------- v3: template picker ---------------------------------------------
 // The chosen template travels through the whole pipeline as
 // template: "safety" | "general" and drives which sections show on the
 // Confirm and Record screens (and which demo buttons appear).
 const tplSafetyBtn=document.getElementById('tplSafety'), tplGeneralBtn=document.getElementById('tplGeneral');
-function setTemplate(tpl){
+function setTemplate(tpl, fromUpload){
   state.template=tpl;
-  tplSafetyBtn.classList.toggle('sel', tpl==='safety');
-  tplGeneralBtn.classList.toggle('sel', tpl==='general');
+  if(!fromUpload) clearTemplateSelection();  // v5: picking a builtin card deselects any upload
+  tplSafetyBtn.classList.toggle('sel', tpl==='safety' && !fromUpload);
+  tplGeneralBtn.classList.toggle('sel', tpl==='general' && !fromUpload);
   // Meeting-type field: dropdown for safety, free text for general.
   const sel=document.getElementById('meetingType'), txt=document.getElementById('meetingTypeText');
   const lbl=document.getElementById('meetingTypeLabel');
@@ -1071,10 +1221,28 @@ function rbSection(title,orange,items,emptyText,fmt){
   const lis=(items&&items.length)?items.map(fmt).join(''):`<li class="none">${emptyText}</li>`;
   return h+`<ul class="rb" style="margin-bottom:16px">${lis}</ul>`;
 }
+// v5 (03-D): JS mirror of the server's unambiguous due-date parse — used only
+// to decide whether to show the "no clear date" nudge chip. Never guesses.
+const JS_WEEKDAYS={monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6,sunday:0};
+function jsHasClearDate(byWhen){
+  const t=String(byWhen||'').trim().toLowerCase();
+  if(!t) return false;
+  if(/\b\d{4}-\d{2}-\d{2}\b/.test(t)) return true;
+  const first=t.split(/[\s,;.!]+/)[0];
+  return first==='today'||first==='tomorrow'||Object.prototype.hasOwnProperty.call(JS_WEEKDAYS,first);
+}
+
 function buildReadback(ex){
   const S=document.getElementById('rbSections'); let html='';
   const t=(ex&&ex.template)||state.template;
-  const fmtAct=a=>`<li><b>${a.who}</b> — ${a.what} <em>(by ${a.when})</em></li>`;
+  // v5: actions with no parseable date get an amber "pick one?" chip —
+  // skippable, never blocking, never guessed (03-D). Custom template fields
+  // render generically as label: value.
+  const fmtAct=(a,i)=>{
+    const nudge = jsHasClearDate(a.when) ? ''
+      : ` <span class="ar-due nodate">no clear date</span> <input type="date" class="nudge-date" data-idx="${i}" title="Pick a date (optional)" style="min-height:26px;font-size:12px;border:1px solid #d97706;border-radius:6px;padding:1px 4px" />`;
+    return `<li><b>${a.who}</b> — ${a.what} <em>(by ${a.when})</em>${customPairsHtml(a.custom,'actions')}${nudge}</li>`;
+  };
   const fmtDec=d=>`<li>${d}</li>`;
   const fmtSum=s=>`<li>${String(s).replace(/\n+/g,'<br/>')}</li>`;
   if(t==='general'){
@@ -1088,11 +1256,20 @@ function buildReadback(ex){
       i=>`<li><b>${i.description}</b> — ${i.outcome||''} <em>(${i.severity||'not stated'})</em></li>`);
     html+=rbSection('What we covered — hazards &amp; controls',false,ex?ex.hazards:[],
       'Nothing was auto-extracted from this transcript in the demo build — read the talk back to the group, then add hazards on the next screen.',
-      h=>`<li><b>${h.hazard}</b> — control agreed: ${h.control}. <em>(${h.tier})</em></li>`);
+      h=>`<li><b>${h.hazard}</b> — control agreed: ${h.control}. <em>(${h.tier})</em>${customPairsHtml(h.custom,'hazards')}</li>`);
     html+=rbSection('Actions &amp; follow-ups — confirm the owner and the date',true,ex?ex.actions:[],
       'No actions or follow-ups identified — confirm none are needed, or add them on the next screen.',fmtAct);
     html+=rbSection('Decisions made',false,ex?ex.decisions:[],'No decisions recorded.',fmtDec);
     html+=rbSection('Minutes summary',false,(ex&&ex.summary)?[ex.summary]:[],'No summary was auto-extracted.',fmtSum);
+  }
+  // v5: custom sections from an uploaded template, rendered generically.
+  if(ex && ex.customSections && Object.keys(ex.customSections).length){
+    customSectionDefs().forEach(def=>{
+      const key=snakeTitle(def.title);
+      const rows=ex.customSections[key]||[];
+      html+=rbSection(escapeHtml(def.title),false,rows,'Nothing recorded for this section.',
+        r=>'<li>'+ (def.columns||[]).map(c=>escapeHtml(c.label)+': '+escapeHtml(r[c.key]==null?'—':r[c.key])).join(' · ') +'</li>');
+    });
   }
   // v4: carried-over actions — final section, read out like the others.
   if(state.carriedOver.length){
@@ -1100,6 +1277,17 @@ function buildReadback(ex){
       a=>`<li><b>${a.who||'Unassigned'}</b> — ${a.what} <em>(raised ${a.meeting_date||'—'}, by ${a.by_when||'—'})</em></li>`);
   }
   S.innerHTML=html;
+  // v5 (03-D): wire the nudge date pickers — choosing a date rewrites by_when
+  // to the unambiguous ISO form; skipping leaves it amber. Never guessed.
+  S.querySelectorAll('.nudge-date').forEach(inp=>{
+    inp.addEventListener('change',()=>{
+      const i=Number(inp.dataset.idx);
+      if(inp.value && state.extraction && state.extraction.actions[i]){
+        state.extraction.actions[i].when=inp.value;
+        buildReadback(state.extraction);
+      }
+    });
+  });
 
   document.getElementById('rbAtt').textContent=`${state.selected.size} attendee${state.selected.size===1?'':'s'} present and signed in.`;
   document.getElementById('rbAddNote').value='';
@@ -1131,8 +1319,8 @@ function buildRecord(ex){
   document.getElementById('attHeading').textContent = isGen ? 'Attendees & Sign-off' : 'Attendance & Sign-off';
   const sheet=document.getElementById('sheet'); const disc=sheet.querySelector('.disc');
   const order = isGen
-    ? ['attSect','sumSect','actSect','carrySect','decSect','notesSect','incSect','hazSect']
-    : ['incSect','hazSect','actSect','carrySect','decSect','sumSect','notesSect','attSect'];
+    ? ['attSect','sumSect','actSect','carrySect','decSect','customSect','notesSect','incSect','hazSect']
+    : ['incSect','hazSect','actSect','carrySect','decSect','sumSect','customSect','notesSect','attSect'];
   order.forEach(id=>sheet.insertBefore(document.getElementById(id), disc));
 
   document.getElementById('shType').textContent=state.meetingType;
@@ -1176,6 +1364,47 @@ function buildRecord(ex){
     });
     cb.appendChild(tr);
   });
+
+  // v5: custom template content, rendered generically (label: value). Custom
+  // ROW fields are listed under their table (the editable cells stay pure
+  // core fields); custom SECTIONS get their own block. Read-only in v5.
+  const customBody=document.getElementById('customBody');
+  customBody.innerHTML='';
+  document.querySelectorAll('#hazSect .ar-meta, #actSect .ar-meta').forEach(e=>e.remove()); // no dupes on rebuild
+  let anyCustom=false;
+  const rowCustoms=(kind,items)=>{
+    const labels=customColLabels(kind);
+    const lines=[];
+    (items||[]).forEach((it,i)=>{
+      if(it && it.custom){
+        const bits=Object.entries(it.custom).filter(([,v])=>v!=null&&v!=='')
+          .map(([k,v])=>escapeHtml(labels[k]||k)+': '+escapeHtml(v));
+        if(bits.length) lines.push('<div class="ar-meta">Row '+(i+1)+' — '+bits.join(' · ')+'</div>');
+      }
+    });
+    return lines.join('');
+  };
+  if(ex){
+    const hazCustom=rowCustoms('hazards', ex.hazards);
+    if(hazCustom){ document.querySelector('#hazSect').insertAdjacentHTML('beforeend', hazCustom); }
+    const actCustom=rowCustoms('actions', ex.actions);
+    if(actCustom){ document.querySelector('#actSect').insertAdjacentHTML('beforeend', actCustom); }
+    if(ex.customSections && Object.keys(ex.customSections).length){
+      customSectionDefs().forEach(def=>{
+        const key=snakeTitle(def.title);
+        const rows=ex.customSections[key]||[];
+        anyCustom=true;
+        let html='<p style="margin:8px 0 2px"><b>'+escapeHtml(def.title)+'</b></p>';
+        html+= rows.length
+          ? '<table class="ftable"><thead><tr>'+(def.columns||[]).map(c=>'<th>'+escapeHtml(c.label)+'</th>').join('')+'</tr></thead><tbody>'
+            + rows.map(r=>'<tr>'+(def.columns||[]).map(c=>'<td>'+escapeHtml(r[c.key]==null?'':r[c.key])+'</td>').join('')+'</tr>').join('')
+            + '</tbody></table>'
+          : '<p class="ar-meta">Nothing recorded.</p>';
+        customBody.insertAdjacentHTML('beforeend', html);
+      });
+    }
+  }
+  document.getElementById('customSect').classList.toggle('hidden', !anyCustom);
 
   // discussion notes: keep the raw transcript so live capture is never lost
   document.getElementById('shNotes').textContent = ta.value.trim();
@@ -1346,8 +1575,16 @@ function buildExportPayload(){
   const attendance=[];
   document.querySelectorAll('#signGrid .signrow').forEach(r=>{const nm=r.querySelector('.nm'),sg=r.querySelector('.sg');
     if(sg)attendance.push({name:nm.textContent.trim(), signature:sg.textContent.trim()});});
+  // v5: custom row fields ride from the extraction state (read-only in v5,
+  // matched to core rows by position — the sheet's core cells stay editable).
+  const exHaz=(state.extraction&&state.extraction.hazards)||[];
+  const exAct=(state.extraction&&state.extraction.actions)||[];
+  hazards.forEach((h,i)=>{ if(exHaz[i]&&exHaz[i].custom) h.custom=exHaz[i].custom; });
+  actions.forEach((a,i)=>{ if(exAct[i]&&exAct[i].custom) a.custom=exAct[i].custom; });
   return {
     template: state.template,
+    template_id: state.templateId,   // v5
+    custom_sections: (state.extraction && state.extraction.customSections) || {},  // v5
     meeting_type:g('shType'), site_name:g('shSite'), meeting_date:g('shDate'), led_by:g('shLed'),
     summary: document.getElementById('shSummary').textContent.trim(),
     topics: (state.extraction && state.extraction.topics) || [],
@@ -1528,7 +1765,9 @@ saveRegBtn.addEventListener('click',async()=>{
     extra: p.template==='general' ? {topics:p.topics||[]} : {},
     attendance:p.attendance, incidents:p.incidents, hazards:p.hazards,
     actions:p.actions.filter(a=>a.what), decisions:p.decisions,
-    carried_over: state.carriedOver.map(a=>a.id)  // v4: recorded in extra server-side
+    carried_over: state.carriedOver.map(a=>a.id),  // v4: recorded in extra server-side
+    template_id: p.template_id,           // v5
+    custom_sections: p.custom_sections    // v5: stored in extra, register-exempt
   };
   const label=saveRegBtn.innerHTML; saveRegBtn.disabled=true; saveRegBtn.innerHTML='Saving…';
   saveRegStatus.textContent=''; saveRegStatus.className='savefeed';
@@ -1685,10 +1924,15 @@ async function exportStored(kind){
   const payload={
     template:m.template, meeting_type:m.meeting_type||'Meeting', site_name:m.site_name,
     meeting_date:m.meeting_date, led_by:m.led_by||'', summary:m.summary||'',
+    template_id:m.template_id||null,                               // v5: spec-driven re-export
+    custom_sections:(m.extra&&m.extra.custom_sections)||{},        // v5
     topics:(m.extra&&m.extra.topics)||[],
+    // v5 (03-A): the server resolves extra.carried_over ids into rows, so a
+    // stored meeting re-exports its carried-over section like the original.
+    carried_over:(m.extra&&m.extra.carried_over_resolved)||[],
     incidents:(m.incidents||[]).map(i=>({description:i.description, severity:i.severity||'not stated', outcome:i.outcome||''})),
-    hazards:(m.hazards||[]).map(h=>({hazard:h.hazard, control:h.control, control_tier:h.control_tier, compliance_note:h.compliance_note})),
-    actions:(m.actions||[]).map(a=>({who:a.who, what:a.what, by_when:a.by_when})),
+    hazards:(m.hazards||[]).map(h=>({hazard:h.hazard, control:h.control, control_tier:h.control_tier, compliance_note:h.compliance_note, custom:(h.extra&&h.extra.custom)||null})),
+    actions:(m.actions||[]).map(a=>({who:a.who, what:a.what, by_when:a.by_when, custom:(a.extra&&a.extra.custom)||null})),
     decisions:m.decisions||[],
     attendance:(m.attendance||[]).map(a=>({name:a.name, signature:a.signature||''}))
   };
@@ -1766,6 +2010,58 @@ async function showSiteHistory(){
   }catch(err){ statusEl.textContent='Couldn’t load the history ('+err.message+').'; }
 }
 document.getElementById('histGo').addEventListener('click',showSiteHistory);
+
+// ---------- v5: sites/people merge (03-C — explicit confirmation, no fuzz) ---
+// Near-duplicate candidates = rows sharing a normalised form or overlapping
+// on recorded aliases only. Renders under the Site history pane.
+function normName(s){ return String(s||'').toLowerCase().replace(/\s+/g,' ').trim(); }
+function dupeGroups(rows){
+  const groups=[];
+  for(let i=0;i<rows.length;i++) for(let j=i+1;j<rows.length;j++){
+    const a=rows[i], b=rows[j];
+    const aset=new Set([normName(a.name),...(a.aliases||[]).map(normName)]);
+    const bset=new Set([normName(b.name),...(b.aliases||[]).map(normName)]);
+    if([...aset].some(x=>bset.has(x))) groups.push([a,b]);
+  }
+  return groups;
+}
+async function renderMergeTool(){
+  const body=document.getElementById('histBody');
+  try{
+    const [sRes,pRes]=await Promise.all([fetch(apiBase()+'/api/sites'), fetch(apiBase()+'/api/people')]);
+    const sites=(await sRes.json()).sites||[], people=(await pRes.json()).people||[];
+    let html='<p style="margin:10px 0 2px"><b>α Merge duplicates</b> <span class="ar-meta">(same name/alias spellings only — nothing fuzzy)</span></p>';
+    const addRows=(kind,rows)=>{
+      const groups=dupeGroups(rows);
+      if(!groups.length) return '<p class="ar-meta">No duplicate '+kind+' detected.</p>';
+      return groups.map(([a,b])=>{
+        return '<div class="ar-row" data-kind="'+kind+'" data-src="'+b.id+'" data-tgt="'+a.id+'">'
+          +'<div style="flex:1"><div class="ar-what">'+escapeHtml(b.name)+' → '+escapeHtml(a.name)+'</div>'
+          +'<div class="ar-meta">Merge “'+escapeHtml(b.name)+'” into “'+escapeHtml(a.name)+'” ('+kind+')</div></div>'
+          +'<button type="button" class="ar-btn merge-btn">α Merge…</button></div>';
+      }).join('');
+    };
+    html+=addRows('sites',sites)+addRows('people',people);
+    const div=document.createElement('div'); div.id='mergeTool'; div.innerHTML=html;
+    const old=document.getElementById('mergeTool'); if(old) old.remove();
+    body.appendChild(div);
+    div.querySelectorAll('.merge-btn').forEach(btn=>{
+      btn.addEventListener('click',async()=>{
+        const row=btn.closest('.ar-row');
+        if(!window.confirm('Merge these '+row.dataset.kind+'? All records move to the kept name; the other becomes an alias. This can\'t be undone.')) return;
+        btn.disabled=true;
+        try{
+          const res=await apiFetch(apiBase()+'/api/'+row.dataset.kind+'/'+row.dataset.src+'/merge',{
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({into_id:Number(row.dataset.tgt)})});
+          if(!res.ok) throw new Error(res.status);
+          row.remove();
+        }catch(err){ btn.disabled=false; alert('Merge failed ('+err.message+').'); }
+      });
+    });
+  }catch(_){}
+}
+document.getElementById('regTabHistory').addEventListener('click',renderMergeTool);
 
 // ---------- v4: Action Register (cross-meeting — the headline feature) ------
 const actionRegModal=document.getElementById('actionRegModal');
@@ -1892,6 +2188,9 @@ document.getElementById('pbStop').addEventListener('click',stopPlayback);
 document.getElementById('pbNew').addEventListener('click',()=>{ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); enterApp(1); });
 document.getElementById('playbackModal').addEventListener('click',e=>{ if(e.target===e.currentTarget){ stopPlayback(); document.getElementById('playbackModal').classList.add('hidden'); } });
 refreshHomePrev();
+// v5: template upload is server-backed — online only.
+document.getElementById('tplUploadRow').style.display = backendConfigured() ? '' : 'none';
+if(backendConfigured()) refreshTemplates();
 // Version stamp on the front door — makes it obvious which build is live.
 { const v=document.getElementById('appVer'); if(v) v.textContent = 'v'+APP_VERSION+(backendConfigured()? '' : ' · offline demo'); }
 

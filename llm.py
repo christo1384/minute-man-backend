@@ -366,10 +366,38 @@ _PROVIDERS = {
 }
 
 
+def _demo_custom_additions(result: dict, template_spec: dict) -> dict:
+    """v5: the keyless demo provider honours an uploaded template's custom
+    columns and sections with deterministic canned values, so the whole
+    template pipeline is testable with zero API keys."""
+    from template_engine import spec_custom_parts, _snake
+
+    per_core, customs = spec_custom_parts(template_spec)
+    for kind in ("hazards", "actions"):
+        cols = per_core.get(kind)
+        if cols:
+            for row in result.get(kind, []):
+                row["custom"] = {c["key"]: f"Demo value for {c['label']}" for c in cols}
+    if customs:
+        result["custom_sections"] = {
+            _snake(s.get("title", "custom")): [
+                {c["key"]: f"Demo {c['label']}" for c in s.get("columns", [])}
+            ]
+            for s in customs
+        }
+    return result
+
+
 def extract_minutes(transcript: str, provider: str | None = None,
-                    template: str = "safety") -> dict:
+                    template: str = "safety",
+                    template_spec: dict | None = None) -> dict:
     """Extract structured minutes from a transcript using the chosen provider
-    and template ("safety" — the default, matching v2.2 — or "general")."""
+    and template ("safety" — the default, matching v2.2 — or "general").
+
+    v5: when `template_spec` (an uploaded template's TemplateSpec) is given,
+    the prompt is assembled dynamically — curated core rules + the template's
+    custom fields/sections behind the injection guard — and the parsed result
+    carries per-row `custom` objects and a top-level `custom_sections`."""
     template = (template or "safety").lower()
     if template not in PROMPTS_BY_TEMPLATE:
         raise ValueError(f"Unknown template '{template}'. Use safety or general.")
@@ -377,5 +405,28 @@ def extract_minutes(transcript: str, provider: str | None = None,
     caller = _PROVIDERS.get(provider)
     if caller is None:
         raise ValueError(f"Unknown provider '{provider}'. Use anthropic, gemini, openai, or demo.")
+
+    if template_spec:
+        from template_engine import build_prompt_for_template
+
+        prompt = build_prompt_for_template(template_spec)
+        has_hazards = any(s.get("kind") == "hazards"
+                          for s in template_spec.get("sections", []))
+        base_template = "safety" if has_hazards else "general"
+        if provider == "demo":
+            raw = _demo_safety(transcript) if has_hazards else _demo_general(transcript)
+            result = _parse_json(raw, base_template)
+            return _demo_custom_additions(result, template_spec)
+        raw = caller(transcript, prompt)
+        result = _parse_json(raw, base_template)
+        # keep whatever custom content the model returned (defensively)
+        try:
+            data = json.loads(raw) if isinstance(raw, str) else {}
+        except Exception:
+            data = {}
+        if isinstance(data, dict) and isinstance(data.get("custom_sections"), dict):
+            result["custom_sections"] = data["custom_sections"]
+        return result
+
     raw = caller(transcript, PROMPTS_BY_TEMPLATE[template])
     return _parse_json(raw, template)

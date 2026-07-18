@@ -55,6 +55,7 @@ class HazardRow(BaseModel):
     control: str
     control_tier: str
     compliance_note: str
+    custom: Optional[dict] = None  # v5: uploaded-template extra columns
 
 
 class IncidentRow(BaseModel):
@@ -67,6 +68,7 @@ class ActionRow(BaseModel):
     who: str
     what: str
     by_when: str
+    custom: Optional[dict] = None  # v5: uploaded-template extra columns
 
 
 class CarriedOverRow(BaseModel):
@@ -98,6 +100,8 @@ class MinutesExportRequest(BaseModel):
     carried_over: List[CarriedOverRow] = []  # v4: outstanding from previous meetings
     decisions: List[str] = []
     attendance: List[AttendanceEntry] = []
+    template_id: Optional[int] = None        # v5: uploaded templates render spec-driven
+    custom_sections: dict = {}               # v5: {"section_key": [ {row}, … ]}
 
 
 DISCLAIMER = (
@@ -242,9 +246,204 @@ def _build_pdf(payload: MinutesExportRequest) -> bytes:
     return buffer.getvalue()
 
 
+# ---------------------------------------------------------------------------
+# v5 — spec-driven rendering for UPLOADED templates: sheet order, sheet titles
+# and column labels come from the template's spec, so the export looks like
+# the spreadsheet the user uploaded. Builtin templates keep their dedicated
+# v4 renderers above (regression-tested byte-comparable) — the generic path
+# is only taken when payload.template_id points at an uploaded template.
+# ---------------------------------------------------------------------------
+def _uploaded_spec_for(payload: MinutesExportRequest) -> dict | None:
+    if payload.template_id is None:
+        return None
+    import crud
+    from db import SessionLocal
+
+    with SessionLocal() as session:
+        t = crud.get_template(session, payload.template_id)
+    if t is None or (t.extra or {}).get("builtin_key"):
+        return None  # unknown or builtin → dedicated paths
+    return t.spec or {}
+
+
+def _spec_rows(payload: MinutesExportRequest, section: dict):
+    """(header labels, data rows) for one spec section, from the payload."""
+    kind = section.get("kind")
+    cols = section.get("columns", [])
+    labels = [c["label"] for c in cols]
+
+    def cell(row_obj, col):
+        if col.get("maps_to"):
+            return getattr(row_obj, col["maps_to"], "") or ""
+        return (row_obj.custom or {}).get(col.get("key"), "") if getattr(row_obj, "custom", None) else ""
+
+    if kind == "hazards":
+        return labels, [[cell(h, c) for c in cols] for h in payload.hazards]
+    if kind == "actions":
+        return labels, [[cell(a, c) for c in cols] for a in payload.actions]
+    if kind == "decisions":
+        return labels, [[d] for d in payload.decisions]
+    if kind == "attendance":
+        def att_cell(e, c):
+            key = c.get("maps_to")
+            return getattr(e, key, "") or "" if key else ""
+        return labels, [[att_cell(e, c) for c in cols] for e in payload.attendance]
+    if kind == "custom":
+        from template_engine import _snake
+        rows = (payload.custom_sections or {}).get(_snake(section.get("title", "")), [])
+        return labels, [[str(r.get(c["key"], "") or "") for c in cols] for r in rows]
+    return labels, []
+
+
+def _summary_pairs(payload: MinutesExportRequest, section: dict):
+    known = {"meeting_type": payload.meeting_type, "site_name": payload.site_name,
+             "meeting_date": payload.meeting_date, "led_by": payload.led_by}
+    pairs = []
+    for f in section.get("fields", []):
+        val = known.get(f["key"])
+        if val is None:
+            val = (payload.custom_sections or {}).get("_summary", {}).get(f["key"], "")
+        pairs.append((f["label"], val or ""))
+    return pairs
+
+
+def _build_pdf_from_spec(payload: MinutesExportRequest, spec: dict) -> bytes:
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        leftMargin=18 * mm, rightMargin=18 * mm, topMargin=16 * mm, bottomMargin=16 * mm,
+        title=f"Minute Man - {payload.meeting_type}")
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle("MMTitle", parent=styles["Title"],
+                                 textColor=colors.HexColor(f"#{SLATE_INDUSTRIAL}"), fontSize=18)
+    heading_style = ParagraphStyle("MMHeading", parent=styles["Heading2"],
+                                   textColor=colors.HexColor(f"#{SLATE_INDUSTRIAL}"), spaceBefore=14)
+    meta_style = ParagraphStyle("MMMeta", parent=styles["Normal"], textColor=colors.grey)
+    body_style = styles["Normal"]
+    disclaimer_style = ParagraphStyle("MMDisclaimer", parent=styles["Normal"],
+                                      fontSize=8, textColor=colors.grey, spaceBefore=16)
+    header_fill = colors.HexColor(f"#{SLATE_INDUSTRIAL}")
+    accent_fill = colors.HexColor(f"#{SAFETY_ORANGE}")
+
+    elements = [
+        Paragraph(f"Minute Man — {payload.meeting_type} Minutes", title_style),
+        Paragraph(f"Site: {payload.site_name or 'Not specified'} &nbsp;|&nbsp; Date: {payload.meeting_date}", meta_style),
+        Spacer(1, 10),
+    ]
+
+    def styled_table(rows, fill):
+        wrapped = [rows[0]]
+        for r in rows[1:]:
+            wrapped.append([Paragraph(str(c), body_style) for c in r])
+        n = max(len(rows[0]), 1)
+        table = Table(wrapped, colWidths=[(158 * mm) / n] * n, repeatRows=1)
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), fill),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTSIZE", (0, 0), (-1, -1), 8),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CCCCCC")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F5F5")]),
+        ]))
+        return table
+
+    num = 0
+    for section in spec.get("sections", []):
+        num += 1
+        title = section.get("title", "")
+        elements.append(Paragraph(f"{num}. {title}".replace("&", "&amp;"), heading_style))
+        if section.get("kind") == "summary":
+            rows = [["Field", "Value"]] + [[a, b] for a, b in _summary_pairs(payload, section)]
+            elements.append(styled_table(rows, header_fill))
+            if payload.summary:
+                elements.append(Spacer(1, 4))
+                elements.append(Paragraph(payload.summary.replace("\n", "<br/>"), body_style))
+            continue
+        labels, data = _spec_rows(payload, section)
+        if data:
+            fill = accent_fill if section.get("kind") == "actions" else header_fill
+            elements.append(styled_table([labels] + data, fill))
+        else:
+            elements.append(Paragraph("Nothing recorded.", body_style))
+        if section.get("kind") == "actions" and payload.carried_over:
+            elements.append(Paragraph("Outstanding Actions (carried over)", heading_style))
+            rows = [["Who", "What", "Raised At", "By When"]]
+            rows += [[c.who, c.what, c.original_date, c.by_when] for c in payload.carried_over]
+            elements.append(styled_table(rows, accent_fill))
+
+    elements.append(Paragraph(DISCLAIMER, disclaimer_style))
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+def _build_excel_from_spec(payload: MinutesExportRequest, spec: dict) -> bytes:
+    wb = Workbook()
+    header_font = Font(bold=True, color="FFFFFF")
+    fill_slate = PatternFill(start_color=SLATE_INDUSTRIAL, end_color=SLATE_INDUSTRIAL, fill_type="solid")
+    fill_orange = PatternFill(start_color=SAFETY_ORANGE, end_color=SAFETY_ORANGE, fill_type="solid")
+    wrap = Alignment(wrap_text=True, vertical="top")
+    first = True
+
+    def sheet(title):
+        nonlocal first
+        safe = title[:31].replace("/", "-").replace("\\", "-").replace("*", "-") \
+                         .replace("?", "-").replace("[", "(").replace("]", ")").replace(":", "-")
+        if first:
+            ws = wb.active
+            ws.title = safe
+            first = False
+            return ws
+        return wb.create_sheet(safe)
+
+    for section in spec.get("sections", []):
+        ws = sheet(section.get("title", "Sheet"))
+        if section.get("kind") == "summary":
+            ws.append(["Minute Man — Meeting Minutes"])
+            ws["A1"].font = Font(bold=True, size=14, color=SLATE_INDUSTRIAL)
+            for a, b in _summary_pairs(payload, section):
+                ws.append([a, b])
+            if payload.summary:
+                ws.append([])
+                ws.append([payload.summary])
+                ws.cell(row=ws.max_row, column=1).alignment = wrap
+            ws.append([])
+            ws.append([DISCLAIMER])
+            ws.cell(row=ws.max_row, column=1).alignment = wrap
+            _autosize(ws, [40, 50])
+            continue
+        labels, data = _spec_rows(payload, section)
+        ws.append(labels)
+        fill = fill_orange if section.get("kind") == "actions" else fill_slate
+        for cell in ws[1]:
+            cell.font = header_font
+            cell.fill = fill
+        for row in data:
+            ws.append(row)
+        for row in ws.iter_rows(min_row=2):
+            for cell in row:
+                cell.alignment = wrap
+        _autosize(ws, [max(14, min(50, 160 // max(len(labels), 1)))] * max(len(labels), 1))
+        if section.get("kind") == "actions" and payload.carried_over:
+            wsc = sheet("Outstanding (carried over)")
+            wsc.append(["Who", "What", "Raised At", "By When"])
+            for cell in wsc[1]:
+                cell.font = header_font
+                cell.fill = fill_orange
+            for c2 in payload.carried_over:
+                wsc.append([c2.who, c2.what, c2.original_date, c2.by_when])
+            _autosize(wsc, [24, 50, 18, 18])
+
+    buffer = io.BytesIO()
+    wb.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
 @router.post("/pdf")
 def export_pdf(payload: MinutesExportRequest):
-    pdf_bytes = _build_pdf(payload)
+    spec = _uploaded_spec_for(payload)  # v5: uploaded templates render spec-driven
+    pdf_bytes = _build_pdf_from_spec(payload, spec) if spec else _build_pdf(payload)
     filename = f"minute-man-{payload.meeting_type.lower().replace(' ', '-')}-{payload.meeting_date}.pdf"
     return StreamingResponse(
         io.BytesIO(pdf_bytes), media_type="application/pdf",
@@ -375,7 +574,8 @@ def _build_excel(payload: MinutesExportRequest) -> bytes:
 
 @router.post("/excel")
 def export_excel(payload: MinutesExportRequest):
-    xlsx_bytes = _build_excel(payload)
+    spec = _uploaded_spec_for(payload)  # v5: uploaded templates render spec-driven
+    xlsx_bytes = _build_excel_from_spec(payload, spec) if spec else _build_excel(payload)
     filename = f"minute-man-{payload.meeting_type.lower().replace(' ', '-')}-{payload.meeting_date}.xlsx"
     return StreamingResponse(
         io.BytesIO(xlsx_bytes),
