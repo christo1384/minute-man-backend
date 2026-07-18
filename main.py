@@ -71,7 +71,7 @@ import webhooks_out
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("minute-man")
 
-APP_VERSION = "5.1.0"
+APP_VERSION = "5.2.0"
 
 
 def require_write_key(x_api_key: str | None = Header(None, alias="X-API-Key")):

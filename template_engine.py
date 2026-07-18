@@ -56,7 +56,11 @@ CORE_LABELS = {  # exact canonical labels — matching these exactly raises no w
 
 SYNONYMS = {  # containment-matched; a hit here that isn't an exact CORE_LABELS hit → warning
     "hazard": ["hazard", "risk"],
-    "control": ["control discussed", "what we're doing", "doing about", "control measure", "mitigation"],
+    # v5.2: bare forms "controls"/"control" added. Only safe because _match_key
+    # resolves LONGEST-synonym-wins — otherwise "Control Level"/"Control Measure"
+    # would be captured here instead of control_tier/control.
+    "control": ["control discussed", "what we're doing", "doing about", "control measure",
+                "mitigation", "controls", "control"],
     "control_tier": ["tier", "control level", "hierarchy"],
     "compliance_note": ["compliance", "hswa", "note"],
     "who": ["who", "person", "responsible", "owner", "assigned"],
@@ -89,26 +93,42 @@ def _snake(label: str) -> str:
 def _match_key(label: str, keys) -> tuple[str | None, bool]:
     """(matched core key, was_exact). Containment match against SYNONYMS,
     exactness against CORE_LABELS."""
+    # v5.2: containment pass is LONGEST-MATCH-WINS across candidate keys, not
+    # first-key-wins. With bare "control" present, iteration order would demote
+    # "Control Level"/"Control Measure" to `control`; scoring by matched-synonym
+    # length makes the more specific label win regardless of key order. Ties keep
+    # the earlier key (stable, matches pre-5.2 behaviour). Exact CORE_LABELS pass
+    # still runs first, so canonical labels map with no warning.
     f = _fold(label)
     for k in keys:
         if f in CORE_LABELS.get(k, set()):
             return k, True
+    best_key, best_len = None, 0
     for k in keys:
         for syn in SYNONYMS.get(k, []):
-            if syn in f:
-                return k, False
-    return None, False
+            if syn in f and len(syn) > best_len:
+                best_key, best_len = k, len(syn)
+    return best_key, False
 
 
 class TemplateError(ValueError):
     """User-facing parse rejection — the message is shown verbatim."""
 
 
-def _check_label(label: str):
-    if len(str(label)) > MAX_LABEL_LEN:
+def _check_label(label: str, sheet_title: str = ""):
+    """Reject over-long labels. v5.2: the message names the sheet, states the
+    limit and the actual length, and says what to do. The cap stays — over-long
+    labels are refused outright, never truncated-and-accepted, which is also what
+    stops a long injection-style label from ever being parsed."""
+    s = str(label)
+    if len(s) > MAX_LABEL_LEN:
+        where = f" on sheet “{sheet_title}”" if sheet_title else ""
         raise TemplateError(
-            f"Column label “{str(label)[:40]}…” is longer than {MAX_LABEL_LEN} "
-            "characters — please shorten it in the spreadsheet and re-upload.")
+            f"The column heading{where} starting “{s[:40]}…” is {len(s)} "
+            f"characters long. Headings must be {MAX_LABEL_LEN} characters or "
+            "fewer. Please shorten that heading in the spreadsheet and upload "
+            "the template again — a short heading like “Control” or “By When” "
+            "works best.")
 
 
 def _cell_value(v):
@@ -134,7 +154,7 @@ def _classify_sheet(title: str, rows: list[list]) -> dict:
     warnings = []
 
     for label in header_labels:
-        _check_label(label)
+        _check_label(label, title)
     if len(header_labels) > MAX_COLUMNS:
         raise TemplateError(
             f"Sheet “{title}” has {len(header_labels)} columns — the maximum "
@@ -199,7 +219,7 @@ def _classify_sheet(title: str, rows: list[list]) -> dict:
                     continue  # title row convention: first row, single cell
             if b in (None, "") and len(a_str) > MAX_LABEL_LEN:
                 continue  # disclaimer-style long single-cell row
-            _check_label(a_str)
+            _check_label(a_str, title)
             key, exact = _match_key(a_str, SUMMARY_KEYS)
             if key:
                 fields.append({"key": key, "label": a_str})
