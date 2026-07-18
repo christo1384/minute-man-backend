@@ -14,8 +14,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from dates import parse_due_date, parse_meeting_date
 from matching import is_real_person, normalize
-from models import (Action, Attendee, Decision, Hazard, Incident, Meeting,
-                    Person, Site, Template)
+from models import (Action, Attendee, Decision, FeedToken, Hazard, Incident,
+                    Meeting, Person, Site, Template, Webhook)
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -649,3 +649,104 @@ def list_sites(session: Session) -> list[dict]:
 def list_people(session: Session) -> list[dict]:
     return [{"id": p.id, "name": p.name, "aliases": p.aliases or []}
             for p in _active_named_rows(session, Person)]
+
+
+# ---------------------------------------------------------------------------
+# v5.1 — feed tokens & webhooks (the office loop)
+# ---------------------------------------------------------------------------
+def create_feed_token(session: Session, label: str | None) -> FeedToken:
+    import secrets
+
+    t = FeedToken(token=secrets.token_urlsafe(32), label=(label or "").strip() or None,
+                  revoked=False, extra={})
+    session.add(t)
+    session.commit()
+    session.refresh(t)
+    return t
+
+
+def list_feed_tokens(session: Session) -> list[dict]:
+    return [{"id": t.id, "label": t.label,
+             "token_hint": "…" + t.token[-6:],  # never re-show the full token
+             "revoked": bool(t.revoked), "created_at": _iso(t.created_at)}
+            for t in session.execute(select(FeedToken)).scalars()]
+
+
+def revoke_feed_token(session: Session, token_id: int) -> bool:
+    t = session.get(FeedToken, token_id)
+    if t is None:
+        return False
+    t.revoked = True
+    session.commit()
+    return True
+
+
+def get_feed_token(session: Session, token: str) -> FeedToken | None:
+    t = session.execute(select(FeedToken).where(FeedToken.token == token)).scalars().first()
+    return None if (t is None or t.revoked) else t
+
+
+def count_feeds(session: Session) -> int:
+    return session.execute(select(func.count(FeedToken.id))
+                           .where((FeedToken.revoked.is_(False)) | (FeedToken.revoked.is_(None)))).scalar_one()
+
+
+def create_webhook(session: Session, url: str, events: list | None,
+                   secret: str | None) -> tuple[Webhook, str]:
+    import secrets as _s
+
+    real_secret = (secret or "").strip() or _s.token_urlsafe(24)
+    w = Webhook(url=url.strip(), secret=real_secret, events=list(events or []),
+                active=True, extra={})
+    session.add(w)
+    session.commit()
+    session.refresh(w)
+    return w, real_secret  # the secret is returned ONCE, at creation
+
+
+def webhook_to_dict(w: Webhook) -> dict:
+    return {"id": w.id, "url": w.url, "events": w.events or [],
+            "active": bool(w.active), "last_status": w.last_status,
+            "last_fired_at": _iso(w.last_fired_at), "created_at": _iso(w.created_at)}
+
+
+def list_webhooks(session: Session) -> list[dict]:
+    return [webhook_to_dict(w) for w in session.execute(select(Webhook)).scalars()]
+
+
+def update_webhook(session: Session, webhook_id: int, active: bool | None = None,
+                   events: list | None = None, url: str | None = None) -> Webhook | None:
+    w = session.get(Webhook, webhook_id)
+    if w is None:
+        return None
+    if active is not None:
+        w.active = bool(active)
+    if events is not None:
+        w.events = list(events)
+    if url is not None:
+        w.url = url.strip()
+    session.commit()
+    return w
+
+
+def delete_webhook(session: Session, webhook_id: int) -> bool:
+    w = session.get(Webhook, webhook_id)
+    if w is None:
+        return False
+    session.delete(w)
+    session.commit()
+    return True
+
+
+def count_webhooks(session: Session) -> int:
+    return session.execute(select(func.count(Webhook.id))
+                           .where((Webhook.active.is_(True)))).scalar_one()
+
+
+def action_register_row(session: Session, action_id: int) -> dict | None:
+    """One action in the register-row shape — the webhook payload shape."""
+    a = session.get(Action, action_id)
+    if a is None:
+        return None
+    m = session.get(Meeting, a.meeting_id)
+    return _action_row(a, m, date.today())

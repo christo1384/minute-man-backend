@@ -1,5 +1,16 @@
 """
-Minute Man v5 — SQLAlchemy models (schema version 3).
+Minute Man v5.1 — SQLAlchemy models (schema version 4).
+
+Schema v4 delta over v3 (ADDITIVE — see alembic/versions/0003…py): the
+"Office Loop" plumbing. Standards, not stored credentials: Minute Man never
+holds a Microsoft/Google token — the office subscribes (ICS feed) or receives
+signed pushes (webhooks) and closes the loop through the existing
+PATCH /api/actions/{id}.
+  * New table `feed_tokens` — unguessable tokens for the read-only ICS feed
+    (calendar apps can't send auth headers, so the token IS the auth).
+  * New table `webhooks` — outbound JSON POST subscriptions with HMAC secrets.
+  * schema_meta.extra JSON — app-level bookkeeping (e.g. daily lazy-sweep
+    stamps) so no background scheduler is needed on Render's free tier.
 
 Schema v3 delta over v2 (ADDITIVE — see alembic/versions/0002…py):
   * New table `templates` — builtin + uploaded meeting templates; the parsed
@@ -259,10 +270,46 @@ class Decision(Base):
 
 
 class SchemaMeta(Base):
-    """Single row: which schema version this database is on (1 for v3)."""
+    """Single row: which schema version this database is on. v4 adds `extra`
+    for app-level bookkeeping (lazy-sweep stamps — see webhooks_out.py)."""
 
     __tablename__ = "schema_meta"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     schema_version: Mapped[int] = mapped_column(Integer, nullable=False)
     applied_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    extra: Mapped[dict | None] = mapped_column(JSON, nullable=True)  # v4
+
+
+class FeedToken(Base):
+    """v4 — access tokens for the read-only ICS feed. The token is a long
+    random urlsafe string; possession of the URL is the credential (that is
+    how every calendar-subscription service works). Revoke = row flag."""
+
+    __tablename__ = "feed_tokens"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    token: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    label: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    extra: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class Webhook(Base):
+    """v4 — outbound webhook subscriptions (Power Automate / Zapier / Make
+    endpoints). Deliveries are signed with HMAC-SHA256 of the raw body using
+    `secret`; `events` is a JSON list of subscribed event names (empty list =
+    all events)."""
+
+    __tablename__ = "webhooks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    url: Mapped[str] = mapped_column(String(500), nullable=False)
+    secret: Mapped[str] = mapped_column(String(64), nullable=False)
+    events: Mapped[list] = mapped_column(JSON, default=list)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_status: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    last_fired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    extra: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

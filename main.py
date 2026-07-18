@@ -1,5 +1,16 @@
 """
-Minute Man — FastAPI backend. v5.0 "Templates": bring-your-own spreadsheet.
+Minute Man — FastAPI backend. v5.1 "Office Loop" on top of v5.0 "Templates".
+
+v5.1 additions (standards, not stored credentials — see webhooks_out.py):
+  GET    /api/feed/{token}/minuteman.ics -> subscribable ICS feed (meetings +
+                                            open actions; token IS the auth)
+  POST/GET/DELETE /api/feeds             -> feed-token management
+  POST/GET/PATCH/DELETE /api/webhooks    -> outbound webhook management
+  POST   /api/webhooks/{id}/test         -> send a signed sample payload
+  Events fired: meeting.saved, action.created/closed/reopened, action.overdue
+  Optional email digest via MM_SMTP_* env (off & invisible by default).
+  The closing loop from the office is the EXISTING PATCH /api/actions/{id}.
+
 
 v5 additions on top of v4 "Registers":
   POST   /api/templates          -> upload a template (JSON: filename +
@@ -55,10 +66,12 @@ from export_routes import router as export_router, MinutesExportRequest, Attenda
 import crud
 from db import get_schema_version, get_session, init_db, SessionLocal
 
+import webhooks_out
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("minute-man")
 
-APP_VERSION = "5.0.0"
+APP_VERSION = "5.1.0"
 
 
 def require_write_key(x_api_key: str | None = Header(None, alias="X-API-Key")):
@@ -102,6 +115,15 @@ logger.info("CORS allowed origins: %s", allowed_origins)
 app.include_router(export_router)
 
 
+# v5.1: lazy daily sweeps (overdue webhook events + optional email digest) —
+# piggyback on API traffic because Render's free tier has no scheduler.
+@app.middleware("http")
+async def _lazy_sweep_middleware(request, call_next):
+    if request.url.path.startswith("/api/"):
+        webhooks_out.run_lazy_sweeps()  # cheap when nothing to do; never raises
+    return await call_next(request)
+
+
 # ---------------------------------------------------------------------------
 # Database startup — create tables + stamp schema_meta (see db.py / models.py).
 # ---------------------------------------------------------------------------
@@ -139,10 +161,12 @@ def health_check(session: Session = Depends(get_session)):
         sites = crud.count_sites(session)
         people = crud.count_people(session)
         templates_stored = crud.count_templates(session)
+        feeds = crud.count_feeds(session)
+        webhooks = crud.count_webhooks(session)
         database = "ok"
     except Exception:
         logger.exception("Health check: database error")
-        meetings_stored = sites = people = templates_stored = 0
+        meetings_stored = sites = people = templates_stored = feeds = webhooks = 0
         database = "error"
     return {
         "status": "ok",
@@ -157,6 +181,9 @@ def health_check(session: Session = Depends(get_session)):
         "sites": sites,
         "people": people,
         "templates_stored": templates_stored,
+        "feeds": feeds,
+        "webhooks": webhooks,
+        "email_configured": webhooks_out.email_configured(),
         "api_key_required": bool(os.getenv("MM_API_KEY")),
     }
 
@@ -325,7 +352,20 @@ def save_meeting(req: MeetingSaveRequest, session: Session = Depends(get_session
         logger.exception("Saving meeting failed")
         raise HTTPException(status_code=500, detail=f"Could not save the meeting: {exc}")
     saved = crud.get_meeting(session, meeting.id)
-    return crud.meeting_to_dict(saved, session)
+    result = crud.meeting_to_dict(saved, session)
+    # v5.1: relay to the office (after commit; never blocks or fails the save)
+    webhooks_out.fire_event("meeting.saved", {
+        "id": saved.id, "template": saved.template, "meeting_type": saved.meeting_type,
+        "site_name": saved.site_name, "meeting_date": saved.meeting_date,
+        "led_by": saved.led_by, "summary": saved.summary,
+        "action_ids": [a["id"] for a in result["actions"]],
+        "hazard_count": len(result["hazards"]), "decision_count": len(result["decisions"]),
+    })
+    for a in result["actions"]:
+        row = crud.action_register_row(session, a["id"])
+        if row:
+            webhooks_out.fire_event("action.created", row)
+    return result
 
 
 @app.get("/api/meetings")
@@ -433,6 +473,9 @@ def patch_action(action_id: int, req: ActionPatch,
     row = crud.set_action_status(session, action_id, req.status, req.closed_by)
     if row is None:
         raise HTTPException(status_code=404, detail=f"No action with id {action_id}.")
+    # v5.1: relay the close/reopen to the office
+    webhooks_out.fire_event(
+        "action.closed" if req.status == "closed" else "action.reopened", row)
     return row
 
 
@@ -568,6 +611,148 @@ def merge_person(person_id: int, req: MergeRequest, session: Session = Depends(g
         raise HTTPException(status_code=404,
                             detail="Unknown person id (or trying to merge a person into themselves).")
     return result
+
+
+# ---------------------------------------------------------------------------
+# v5.1 — the ICS feed + feed-token management
+# ---------------------------------------------------------------------------
+from fastapi.responses import Response
+
+
+@app.get("/api/feed/{token}/minuteman.ics")
+def ics_feed(token: str,
+             site: Optional[str] = Query(None),
+             include: str = Query("both"),
+             session: Session = Depends(get_session)):
+    """The subscribable calendar/task feed. The unguessable token is the
+    credential (calendar apps can't send headers). Revoked/unknown → plain
+    404 with no information leak."""
+    t = crud.get_feed_token(session, token)
+    if t is None:
+        raise HTTPException(status_code=404, detail="Not found.")
+    if include not in ("meetings", "actions", "both"):
+        include = "both"
+    from ics_feed import build_feed
+
+    body = build_feed(session, site_name=site, include=include)
+    return Response(content=body, media_type="text/calendar; charset=utf-8",
+                    headers={"Content-Disposition": 'inline; filename="minuteman.ics"',
+                             "Cache-Control": "no-cache"})
+
+
+class FeedCreate(BaseModel):
+    label: Optional[str] = None
+
+
+@app.post("/api/feeds", dependencies=[Depends(require_write_key)])
+def create_feed(req: FeedCreate, session: Session = Depends(get_session)):
+    t = crud.create_feed_token(session, req.label)
+    # The FULL URL is returned exactly once, here.
+    return {"id": t.id, "label": t.label,
+            "url_path": f"/api/feed/{t.token}/minuteman.ics",
+            "token": t.token}
+
+
+@app.get("/api/feeds")
+def get_feeds(session: Session = Depends(get_session)):
+    return {"feeds": crud.list_feed_tokens(session)}
+
+
+@app.delete("/api/feeds/{feed_id}", dependencies=[Depends(require_write_key)])
+def revoke_feed(feed_id: int, session: Session = Depends(get_session)):
+    if not crud.revoke_feed_token(session, feed_id):
+        raise HTTPException(status_code=404, detail=f"No feed with id {feed_id}.")
+    return {"revoked": feed_id}
+
+
+# ---------------------------------------------------------------------------
+# v5.1 — webhook management
+# ---------------------------------------------------------------------------
+class WebhookCreate(BaseModel):
+    url: str
+    events: Optional[List[str]] = None
+    secret: Optional[str] = None
+
+
+class WebhookPatch(BaseModel):
+    active: Optional[bool] = None
+    events: Optional[List[str]] = None
+    url: Optional[str] = None
+
+
+def _validate_events(events):
+    if events:
+        bad = [e for e in events if e not in webhooks_out.EVENT_NAMES]
+        if bad:
+            raise HTTPException(status_code=422,
+                                detail=f"Unknown event(s) {bad}. Valid: {list(webhooks_out.EVENT_NAMES)}")
+
+
+@app.post("/api/webhooks", dependencies=[Depends(require_write_key)])
+def add_webhook(req: WebhookCreate, session: Session = Depends(get_session)):
+    if not req.url.lower().startswith(("http://", "https://")):
+        raise HTTPException(status_code=422, detail="url must start with http(s)://")
+    _validate_events(req.events)
+    w, secret = crud.create_webhook(session, req.url, req.events, req.secret)
+    return crud.webhook_to_dict(w) | {"secret": secret}  # secret shown ONCE
+
+
+@app.get("/api/webhooks")
+def get_webhooks(session: Session = Depends(get_session)):
+    return {"webhooks": crud.list_webhooks(session)}  # secrets never re-shown
+
+
+@app.patch("/api/webhooks/{webhook_id}", dependencies=[Depends(require_write_key)])
+def patch_webhook(webhook_id: int, req: WebhookPatch,
+                  session: Session = Depends(get_session)):
+    _validate_events(req.events)
+    w = crud.update_webhook(session, webhook_id, active=req.active,
+                            events=req.events, url=req.url)
+    if w is None:
+        raise HTTPException(status_code=404, detail=f"No webhook with id {webhook_id}.")
+    return crud.webhook_to_dict(w)
+
+
+@app.delete("/api/webhooks/{webhook_id}", dependencies=[Depends(require_write_key)])
+def remove_webhook(webhook_id: int, session: Session = Depends(get_session)):
+    if not crud.delete_webhook(session, webhook_id):
+        raise HTTPException(status_code=404, detail=f"No webhook with id {webhook_id}.")
+    return {"deleted": webhook_id}
+
+
+@app.post("/api/webhooks/{webhook_id}/test", dependencies=[Depends(require_write_key)])
+def test_webhook(webhook_id: int, session: Session = Depends(get_session)):
+    """Send a signed sample payload SYNCHRONOUSLY and report the outcome —
+    this is the 'did I wire Power Automate right?' button."""
+    import hashlib
+    import hmac as _hmac
+    import json as _json
+    import urllib.error
+    import urllib.request
+    import uuid as _uuid
+
+    from models import Webhook
+
+    w = session.get(Webhook, webhook_id)
+    if w is None:
+        raise HTTPException(status_code=404, detail=f"No webhook with id {webhook_id}.")
+    body = _json.dumps({"event": "test",
+                        "sent_at": "",
+                        "data": {"hello": "from Minute Man", "webhook_id": w.id}})
+    sig = _hmac.new(w.secret.encode(), body.encode(), hashlib.sha256).hexdigest()
+    req2 = urllib.request.Request(
+        w.url, data=body.encode(), method="POST",
+        headers={"Content-Type": "application/json", "X-MinuteMan-Event": "test",
+                 "X-MinuteMan-Delivery": str(_uuid.uuid4()),
+                 "X-MinuteMan-Signature": sig})
+    try:
+        with urllib.request.urlopen(req2, timeout=5) as resp:
+            status = resp.status
+    except urllib.error.HTTPError as exc:
+        status = exc.code
+    except Exception as exc:
+        return {"delivered": False, "error": str(exc)[:160]}
+    return {"delivered": 200 <= status < 300, "status": status}
 
 
 # ---------------------------------------------------------------------------

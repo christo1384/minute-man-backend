@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
-SCHEMA_VERSION = 3  # v5 "Templates" — templates table, template_id, parsed meeting dates
+SCHEMA_VERSION = 4  # v5.1 "Office Loop" — feed_tokens, webhooks, sweep bookkeeping
 
 # sqlite:///./minuteman.db  →  a file called minuteman.db next to main.py.
 DEFAULT_DB_URL = "sqlite:///./minuteman.db"
