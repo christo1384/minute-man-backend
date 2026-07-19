@@ -216,6 +216,49 @@ def email_configured() -> bool:
     return bool(os.getenv("MM_SMTP_HOST") and os.getenv("MM_DIGEST_TO"))
 
 
+def smtp_configured() -> bool:
+    """v5.3 — the record-emailer only needs an SMTP host (recipients are
+    chosen per meeting, so MM_DIGEST_TO is not required for it)."""
+    return bool(os.getenv("MM_SMTP_HOST"))
+
+
+def send_email(recipients: list[str], subject: str, text: str,
+               html: str | None = None,
+               attachment: tuple[str, bytes, str] | None = None) -> None:
+    """v5.3 — shared SMTP sender (stdlib only). `attachment` is
+    (filename, bytes, mimetype). Raises on failure — callers decide whether
+    that's fatal (the record-emailer surfaces it; the digest swallows it)."""
+    from email.mime.application import MIMEApplication
+
+    msg = MIMEMultipart("mixed")
+    msg["Subject"] = subject
+    msg["From"] = os.getenv("MM_SMTP_FROM", os.getenv("MM_SMTP_USER", "minuteman@localhost"))
+    msg["To"] = ", ".join(recipients)
+    alt = MIMEMultipart("alternative")
+    alt.attach(MIMEText(text, "plain"))
+    if html:
+        alt.attach(MIMEText(html, "html"))
+    msg.attach(alt)
+    if attachment:
+        fname, blob, mimetype = attachment
+        maintype, _, subtype = mimetype.partition("/")
+        part = MIMEApplication(blob, _subtype=subtype or "octet-stream")
+        part.add_header("Content-Disposition", "attachment", filename=fname)
+        msg.attach(part)
+    host = os.getenv("MM_SMTP_HOST")
+    port = int(os.getenv("MM_SMTP_PORT", "587"))
+    with smtplib.SMTP(host, port, timeout=15) as smtp:
+        if port != 25:
+            try:
+                smtp.starttls()
+            except smtplib.SMTPNotSupportedError:
+                pass
+        user, pw = os.getenv("MM_SMTP_USER"), os.getenv("MM_SMTP_PASS")
+        if user and pw:
+            smtp.login(user, pw)
+        smtp.sendmail(msg["From"], recipients, msg.as_string())
+
+
 def build_digest(session) -> tuple[str, str]:
     """(plain text, simple HTML). Overdue / due today / due this week /
     carried-over counts. No attendance data, ever."""

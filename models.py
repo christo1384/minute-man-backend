@@ -111,6 +111,9 @@ class Person(Base):
     name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)  # canonical
     aliases: Mapped[list] = mapped_column(JSON, default=list)
     role: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    # v5.3 (schema v5): so a copy of the record can be emailed to them.
+    # Never exposed via ICS feeds, webhooks, or digests (attendance ruling).
+    email: Mapped[str | None] = mapped_column(String(200), nullable=True)
     extra: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 

@@ -372,6 +372,7 @@
       </div>
       <p class="sub">Read this back to the group before you build the record. If someone remembers something that wasn't captured, add it below or go back to the transcript. Nothing is exported until the team agrees it's complete.</p>
       <div class="banner"><b>Read aloud:</b> “Here's what I've got from today's talk — sing out if I've missed anything.”</div>
+      <p class="meta" id="levelNote" style="display:none"></p>
     </div>
 
     <div class="card">
@@ -403,6 +404,7 @@
         <button class="btn btn-slate" onclick="window.print()">⤓ Download / Print PDF</button>
         <button class="btn btn-ghost" id="csvBtn">⤓ Export to CSV / Excel</button>
         <button class="btn btn-ghost" id="shareBtn">⤴ Share / Send</button>
+        <button class="btn btn-ghost" id="emailBtn" style="display:none">✉ Email the record</button>
         <button class="btn btn-primary" id="saveRegBtn" style="width:auto">🗂 Save to Register</button>
       </div>
       <p class="savefeed" id="saveRegStatus"></p>
@@ -533,6 +535,22 @@
     <div class="actions">
       <button class="btn btn-ghost" id="cancelSettings" type="button">Cancel</button>
       <button class="btn btn-primary" id="saveSettings" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ v5.3 EMAIL-THE-RECORD MODAL ============ -->
+<div class="modal hidden" id="emailModal">
+  <div class="panel">
+    <h2>✉ Email the record</h2>
+    <p class="sub">Tick who gets a copy (PDF attached). Anyone with an email address on file is ticked automatically — if an email is attached, a copy gets sent. Add an address inline for anyone missing one.</p>
+    <div id="emailList" style="max-height:40vh;overflow:auto"></div>
+    <label class="fl" style="margin-top:12px">Also send to (comma-separated emails, optional)</label>
+    <input type="text" id="emailExtra" placeholder="office@company.co.nz, pm@client.co.nz"/>
+    <p class="meta" id="emailSendStatus" style="margin-top:10px"></p>
+    <div class="actions">
+      <button class="btn btn-ghost" id="emailCancel" type="button">Cancel</button>
+      <button class="btn btn-primary" id="emailSend" type="button">Send</button>
     </div>
   </div>
 </div>
@@ -671,7 +689,7 @@
 //                   Calls go to /api/minutes on the same address — no CORS, nothing to edit.
 //   "https://..." → a separate backend at that URL (e.g. Cloudflare page + Render backend).
 const BACKEND_URL = "SAME_ORIGIN";
-const APP_VERSION = "5.2";
+const APP_VERSION = "5.3";
 const backendConfigured = () => BACKEND_URL !== "";
 const apiBase = () => BACKEND_URL === "SAME_ORIGIN" ? "" : BACKEND_URL.replace(/\/+$/, "");
 // Wake the backend the moment the page opens (free hosting sleeps when idle,
@@ -749,7 +767,8 @@ async function fetchMinutesFromBackend(){
     led_by: state.ledBy,
     template: state.template,   // v3: "safety" | "general"
     template_id: state.templateId,  // v5: uploaded template row (null for builtins)
-    attendance
+    attendance,
+    duration_minutes: durationMinutes()   // v5.3: server derives the paraphrase level
   };
   const res = await apiFetch(apiBase()+'/api/minutes',{
     method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
@@ -891,6 +910,11 @@ function renderAttendees(){
   const keepSig = Object.assign({}, state.signatures);
   attGrid.innerHTML='';
   settings.crew.forEach(c=>addAttendeeCard(c.name));
+  // v5.3: add a new person on the day — no trip to Settings (founders' request).
+  const addW=document.createElement('div'); addW.className='att att-add';
+  addW.innerHTML='<button type="button" class="pick" id="quickAddBtn"><span class="box">＋</span><span>Add person…</span></button>';
+  addW.querySelector('.pick').addEventListener('click',quickAddPerson);
+  attGrid.appendChild(addW);
   // re-apply selections/signatures for names that still exist
   keepSel.forEach(name=>{
     const w=attGrid.querySelector(`.att[data-name="${CSS.escape(name)}"]`);
@@ -909,6 +933,31 @@ function applyDefaults(){
 }
 renderAttendees();
 applyDefaults();
+// v5.3 — quick-add: create the person locally (crew list + selected) and,
+// when online, upsert them on the server (with their email) via /api/people.
+async function addPersonNow(name,email){
+  name=(name||'').trim(); email=(email||'').trim();
+  if(!name) return false;
+  if(!settings.crew.some(c=>c.name.toLowerCase()===name.toLowerCase())){
+    settings.crew.push({name, initials:''}); saveSettings();
+  }
+  state.emails=state.emails||{}; if(email) state.emails[name]=email;
+  renderAttendees();
+  const w=attGrid.querySelector(`.att[data-name="${CSS.escape(name)}"]`);
+  if(w && !state.selected.has(name)) toggle(name,w);
+  if(backendConfigured()){
+    try{ await apiFetch(apiBase()+'/api/people',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name, email:email||null})}); }
+    catch(_){/* offline/unreachable: they're still on the local record */}
+  }
+  return true;
+}
+window.addPersonNow=addPersonNow;
+function quickAddPerson(){
+  const name=prompt("New person's name (first name + initial works best):");
+  if(!name||!name.trim()) return;
+  const email=prompt('Their email (optional — leave blank to skip). If set, they get a copy of the record when you email it:')||'';
+  addPersonNow(name,email);
+}
 function toggle(name,w){
   if(state.selected.has(name)){ state.selected.delete(name); delete state.signatures[name];
     w.classList.remove('sel'); w.querySelector('.sigwrap').classList.add('hidden'); w.querySelector('.sigwrap input').value=''; }
@@ -1163,6 +1212,16 @@ function matchDemo(t){ if(t.includes("mud soup")||t.includes("crushed metal"))re
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
 const micBtn=document.getElementById('micBtn'), micStatus=document.getElementById('micStatus'), interim=document.getElementById('interim');
 let recog=null, recording=false;
+// v5.3: track how long the meeting actually ran so the summary's paraphrase
+// level can follow the founders' rule (40% short talks / 80% >10min / 100% >20min).
+let recAccumMs=0, recStartMs=null;
+function durationMinutes(){
+  let ms=recAccumMs + (recStartMs?Date.now()-recStartMs:0);
+  if(ms>0) return ms/60000;
+  const words=(ta.value.trim().match(/\S+/g)||[]).length;   // pasted notes: ~150 wpm
+  return words?words/150:null;
+}
+function levelLabel(l){ return l===1?'Light (~40% paraphrase — short talk)':l===2?'Standard (~80% paraphrase)':l===3?'Full (100% paraphrase — long meeting)':''; }
 if(!SR){ micBtn.disabled=true; micStatus.textContent="Live mic isn't supported in this browser — use Chrome/Edge, or paste / load a demo."; }
 function startRec(){
   try{
@@ -1175,10 +1234,11 @@ function startRec(){
     recog.onerror=e=>{ micStatus.textContent='Mic: '+e.error+(e.error==='not-allowed'?' — allow microphone access in the browser.':''); if(e.error==='not-allowed')stopRec(); };
     recog.onend=()=>{ if(recording){ try{recog.start();}catch(_){}} };
     recog.start(); recording=true;
+    if(recStartMs===null) recStartMs=Date.now();   // v5.3 duration
     micBtn.classList.add('rec'); micBtn.innerHTML='<span id="micDot">■</span> Stop recording'; micStatus.textContent='Listening… speak naturally.';
   }catch(err){ micStatus.textContent='Could not start mic: '+err.message; }
 }
-function stopRec(){ recording=false; if(recog){try{recog.stop();}catch(_){}} micBtn.classList.remove('rec'); micBtn.innerHTML='<span id="micDot">●</span> Start recording'; interim.textContent=''; if(ta.value.trim())micStatus.textContent='Recording stopped — review below, then generate.'; }
+function stopRec(){ recording=false; if(recStartMs!==null){ recAccumMs+=Date.now()-recStartMs; recStartMs=null; } if(recog){try{recog.stop();}catch(_){}} micBtn.classList.remove('rec'); micBtn.innerHTML='<span id="micDot">●</span> Start recording'; interim.textContent=''; if(ta.value.trim())micStatus.textContent='Recording stopped — review below, then generate.'; }
 micBtn.addEventListener('click',()=>recording?stopRec():startRec());
 
 const genStatus=document.getElementById('genStatus');
@@ -1196,6 +1256,8 @@ genBtn.addEventListener('click',async()=>{
       state.decisions=minutes.decisions||[];
       state.usingBackend=true;
       state.providerUsed=minutes.provider_used||'';  // v4: the provider that actually ran
+      state.paraphraseLevel=minutes.paraphrase_level||null;  // v5.3
+      const _ln=document.getElementById('levelNote'); if(_ln){ _ln.style.display=state.paraphraseLevel?'':'none'; _ln.textContent=state.paraphraseLevel?('Summary level: '+levelLabel(state.paraphraseLevel)):''; }
       genStatus.textContent='';
       genBtn.innerHTML='Review &amp; Confirm →'; genBtn.disabled=false;
       buildReadback(state.extraction); show(3);
@@ -1760,9 +1822,11 @@ shareBtn.addEventListener('click',async()=>{
   let file;
   try{
     if(backendConfigured() && state.usingBackend){
-      const res=await fetch(apiBase()+'/export/excel',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(buildExportPayload())});
+      // v5.3: share defaults to PDF (founders' call) — Excel stays available
+      // via the "Export to CSV / Excel" button (the exception, not the default).
+      const res=await fetch(apiBase()+'/export/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(buildExportPayload())});
       if(!res.ok) throw new Error('export '+res.status);
-      file=new File([await res.blob()], base+'.xlsx', {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+      file=new File([await res.blob()], base+'.pdf', {type:'application/pdf'});
     } else {
       file=new File([csvString()], base+'.csv', {type:'text/csv'});
     }
@@ -2303,6 +2367,66 @@ document.getElementById('tplUploadRow').style.display = backendConfigured() ? ''
 if(backendConfigured()) refreshTemplates();
 // v5.1: office-loop features are online only too.
 document.getElementById('officeRow').style.display = backendConfigured() ? '' : 'none';
+
+// ---------- v5.3: email the record to selected members ----------------------
+const emailModal=document.getElementById('emailModal'), emailBtn=document.getElementById('emailBtn');
+emailBtn.style.display = backendConfigured() ? '' : 'none';
+let serverEmails={};   // name(normalised) -> email, from /api/people
+function normName(n){ return (n||'').trim().toLowerCase().replace(/\s+/g,' '); }
+async function loadServerEmails(){
+  serverEmails={};
+  try{
+    const r=await fetch(apiBase()+'/api/people'); if(!r.ok) return;
+    (await r.json()).people.forEach(p=>{
+      if(p.email){ serverEmails[normName(p.name)]=p.email; (p.aliases||[]).forEach(a=>serverEmails[normName(a)]=p.email); }
+    });
+  }catch(_){/* offline */}
+}
+function emailFor(name){ return (state.emails||{})[name] || serverEmails[normName(name)] || ''; }
+function emailRow(name){
+  const addr=emailFor(name);
+  const d=document.createElement('div');
+  d.className='crewhead'; d.style.gridTemplateColumns='auto 1fr 1.4fr'; d.style.display='grid'; d.style.gap='8px'; d.style.alignItems='center'; d.style.padding='6px 0';
+  d.innerHTML=`<input type="checkbox" class="em-pick" data-name="${name.replace(/"/g,'&quot;')}" ${addr?'checked':''}/>
+    <span>${name}</span>
+    <input type="email" class="em-addr" placeholder="no email on file — add one" value="${addr.replace(/"/g,'&quot;')}"/>`;
+  const cb=d.querySelector('.em-pick'), inp=d.querySelector('.em-addr');
+  inp.addEventListener('input',()=>{ if(inp.value.includes('@')) cb.checked=true; });
+  return d;
+}
+emailBtn.addEventListener('click',async()=>{
+  const list=document.getElementById('emailList'); list.innerHTML='<p class="meta">Loading emails…</p>';
+  document.getElementById('emailSendStatus').textContent='';
+  emailModal.classList.remove('hidden');
+  await loadServerEmails();
+  list.innerHTML='';
+  const names=buildExportPayload().attendance.map(a=>a.name);
+  if(!names.length) list.innerHTML='<p class="meta">No attendees on this record — use "Also send to" below.</p>';
+  names.forEach(n=>list.appendChild(emailRow(n)));
+});
+document.getElementById('emailCancel').addEventListener('click',()=>emailModal.classList.add('hidden'));
+emailModal.addEventListener('click',e=>{ if(e.target===emailModal) emailModal.classList.add('hidden'); });
+document.getElementById('emailSend').addEventListener('click',async()=>{
+  const st=document.getElementById('emailSendStatus');
+  const recips=new Set();
+  emailModal.querySelectorAll('.em-pick:checked').forEach(cb=>{
+    const row=cb.closest('div'); const addr=row.querySelector('.em-addr').value.trim();
+    if(addr.includes('@')){ recips.add(addr); state.emails=state.emails||{}; state.emails[cb.dataset.name]=addr;
+      if(backendConfigured()) apiFetch(apiBase()+'/api/people',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:cb.dataset.name,email:addr})}).catch(()=>{});
+    }
+  });
+  document.getElementById('emailExtra').value.split(',').map(x=>x.trim()).filter(x=>x.includes('@')).forEach(x=>recips.add(x));
+  if(!recips.size){ st.textContent='No recipients with an email address ticked.'; return; }
+  const btn=document.getElementById('emailSend'); btn.disabled=true; st.textContent='Sending…';
+  try{
+    const res=await apiFetch(apiBase()+'/api/email-record',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({recipients:[...recips], payload:buildExportPayload()})});
+    const j=await res.json();
+    if(!res.ok) throw new Error(j.detail||res.status);
+    st.textContent='✓ Sent to '+j.sent_to.join(', ');
+  }catch(err){ st.textContent='Couldn\u2019t send: '+err.message; }
+  btn.disabled=false;
+});
 // Version stamp on the front door — makes it obvious which build is live.
 { const v=document.getElementById('appVer'); if(v) v.textContent = 'v'+APP_VERSION+(backendConfigured()? '' : ' · offline demo'); }
 

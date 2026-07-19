@@ -647,8 +647,38 @@ def list_sites(session: Session) -> list[dict]:
 
 
 def list_people(session: Session) -> list[dict]:
-    return [{"id": p.id, "name": p.name, "aliases": p.aliases or []}
+    # v5.3: + email (schema v5) so the front-end can pre-tick "send email".
+    return [{"id": p.id, "name": p.name, "aliases": p.aliases or [],
+             "email": getattr(p, "email", None)}
             for p in _active_named_rows(session, Person)]
+
+
+def upsert_person(session: Session, name: str, email: str | None = None,
+                  role: str | None = None) -> dict:
+    """v5.3 — quick-add from the setup screen. Matches the canonical name or
+    any alias (case/whitespace-insensitive, same rules the registers use);
+    creates the person when there's no match. Email/role only ever OVERWRITE
+    when explicitly provided (never cleared implicitly)."""
+    from matching import normalize
+
+    target = normalize(name)
+    found = None
+    for p in _active_named_rows(session, Person):
+        if normalize(p.name) == target or any(normalize(a) == target
+                                              for a in (p.aliases or [])):
+            found = p
+            break
+    if found is None:
+        found = Person(name=name.strip(), aliases=[], extra={})
+        session.add(found)
+    if email is not None and email.strip():
+        found.email = email.strip()
+    if role is not None and role.strip():
+        found.role = role.strip()
+    session.commit()
+    session.refresh(found)
+    return {"id": found.id, "name": found.name, "aliases": found.aliases or [],
+            "email": found.email, "role": found.role}
 
 
 # ---------------------------------------------------------------------------

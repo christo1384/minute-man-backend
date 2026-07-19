@@ -71,7 +71,7 @@ import webhooks_out
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("minute-man")
 
-APP_VERSION = "5.2.0"
+APP_VERSION = "5.3.0"
 
 
 def require_write_key(x_api_key: str | None = Header(None, alias="X-API-Key")):
@@ -151,6 +151,11 @@ class MinutesRequest(BaseModel):
     template: Literal["safety", "general"] = "safety"  # v3; default keeps v2.2 behaviour
     template_id: Optional[int] = None  # v5: a templates-table row; uploads get a dynamic prompt
     attendance: List[AttendanceEntry] = []
+    # v5.3 — paraphrasing levels (founders' rule: 40% toolbox talks, 80% >10min,
+    # 100% >20min). Explicit level wins; else derived from duration_minutes;
+    # both absent = exact v5.1 behaviour.
+    paraphrase_level: Optional[int] = Field(None, ge=1, le=3)
+    duration_minutes: Optional[float] = Field(None, ge=0)
 
 
 @app.get("/api/health")
@@ -223,9 +228,14 @@ def make_minutes(req: MinutesRequest):
                               for s in template_spec.get("sections", []))
                 template_kind = "safety" if has_haz else "general"
 
+    # v5.3: resolve the paraphrase level (None = pre-v5.3 behaviour).
+    from llm import resolve_paraphrase_level
+    level = resolve_paraphrase_level(req.paraphrase_level, req.duration_minutes)
+
     try:
         extracted = extract_minutes(req.transcript, req.provider, template_kind,
-                                    template_spec=template_spec)
+                                    template_spec=template_spec,
+                                    paraphrase_level=level)
     except KeyError as exc:
         # Missing API key for the chosen provider.
         raise HTTPException(
@@ -265,6 +275,8 @@ def make_minutes(req: MinutesRequest):
             common["template_id"] = req.template_id  # v5
             if extracted.get("custom_sections"):
                 common["custom_sections"] = extracted["custom_sections"]
+        if level is not None:
+            common["paraphrase_level"] = level  # v5.3 echo (absent for old callers)
         return common
 
     # Safety (default): the v2.2 shape plus incidents + summary. Validating
@@ -277,7 +289,10 @@ def make_minutes(req: MinutesRequest):
         incidents=extracted.get("incidents", []),
         hazards=extracted.get("hazards", []),
     )
-    return payload.model_dump() | {"provider_used": provider_used}  # v4 echo
+    out = payload.model_dump() | {"provider_used": provider_used}  # v4 echo
+    if level is not None:
+        out["paraphrase_level"] = level  # v5.3 echo (absent for old callers)
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -611,6 +626,67 @@ def merge_person(person_id: int, req: MergeRequest, session: Session = Depends(g
         raise HTTPException(status_code=404,
                             detail="Unknown person id (or trying to merge a person into themselves).")
     return result
+
+
+# ---------------------------------------------------------------------------
+# v5.3 — quick-add a person on the day (founders' request: no trip to
+# Settings) + email the record to selected members.
+# ---------------------------------------------------------------------------
+class PersonIn(BaseModel):
+    name: str = Field(..., min_length=1, max_length=120)
+    email: Optional[str] = Field(None, max_length=200)
+    role: Optional[str] = Field(None, max_length=80)
+
+
+@app.post("/api/people", dependencies=[Depends(require_write_key)])
+def add_person(req: PersonIn, session: Session = Depends(get_session)):
+    """Create (or update by canonical/alias match) a person. Email and role
+    only overwrite when provided. Used by the setup screen's quick-add."""
+    if req.email and "@" not in req.email:
+        raise HTTPException(status_code=422, detail="That email address doesn't look valid.")
+    return crud.upsert_person(session, req.name, email=req.email, role=req.role)
+
+
+class EmailRecordRequest(BaseModel):
+    recipients: List[str] = Field(..., min_length=1, max_length=50)
+    subject: Optional[str] = None
+    payload: MinutesExportRequest  # same body /export/pdf takes
+
+
+@app.post("/api/email-record", dependencies=[Depends(require_write_key)])
+def email_record(req: EmailRecordRequest):
+    """v5.3 — build the PDF record server-side and email it to the selected
+    members. Uses the same MM_SMTP_* env config as the digest (no third-party
+    credentials, the standing ruling). 400 with a friendly message when SMTP
+    isn't configured."""
+    if not webhooks_out.smtp_configured():
+        raise HTTPException(
+            status_code=400,
+            detail="Email isn't configured on the server yet — set the MM_SMTP_* "
+                   "variables (see .env.example), then try again.")
+    bad = [r for r in req.recipients if "@" not in r]
+    if bad:
+        raise HTTPException(status_code=422,
+                            detail=f"These don't look like email addresses: {', '.join(bad[:5])}")
+    from export_routes import _build_pdf, _build_pdf_from_spec, _uploaded_spec_for
+    spec = _uploaded_spec_for(req.payload)
+    pdf_bytes = _build_pdf_from_spec(req.payload, spec) if spec else _build_pdf(req.payload)
+    fname = f"minute-man-{(req.payload.meeting_type or 'meeting').lower().replace(' ', '-')}-{req.payload.meeting_date}.pdf"
+    subject = req.subject or (f"{req.payload.meeting_type} record — "
+                              f"{req.payload.site_name} ({req.payload.meeting_date})")
+    text = (f"Attached is the {req.payload.meeting_type} record for "
+            f"{req.payload.site_name} on {req.payload.meeting_date}, led by "
+            f"{req.payload.led_by or '—'}.\n\nSent from Minute Man. "
+            "AI-generated decision support — a responsible person has reviewed "
+            "and confirmed this record before sending.")
+    try:
+        webhooks_out.send_email(req.recipients, subject, text,
+                                attachment=(fname, pdf_bytes, "application/pdf"))
+    except Exception as exc:
+        logger.exception("email-record send failed")
+        raise HTTPException(status_code=502,
+                            detail=f"The mail server refused the send: {exc}")
+    return {"sent_to": req.recipients, "attachment": fname}
 
 
 # ---------------------------------------------------------------------------

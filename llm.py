@@ -388,9 +388,63 @@ def _demo_custom_additions(result: dict, template_spec: dict) -> dict:
     return result
 
 
+# ---------------------------------------------------------------------------
+# v5.3 — three paraphrasing levels (founders' request). The percentages are
+# "how paraphrased/condensed the summary is": short toolbox talks stay close
+# to the words spoken; long meetings get a fully rewritten condensed summary.
+# When no level is given the prompt is IDENTICAL to v5.1 — old callers and the
+# regression suites are unaffected.
+# ---------------------------------------------------------------------------
+PARAPHRASE_BLOCKS = {
+    1: ("\n\nSUMMARY DETAIL LEVEL — LIGHT (~40% paraphrased). This was a short "
+        "talk: keep the summary close to the speakers' own words and phrasing. "
+        "Quote or near-quote the key statements rather than rewriting them. "
+        "Condense only repetition and filler."),
+    2: ("\n\nSUMMARY DETAIL LEVEL — STANDARD (~80% paraphrased). Rewrite the "
+        "discussion into a professional narrative in your own words, keeping "
+        "all substantive points but condensing how they were said."),
+    3: ("\n\nSUMMARY DETAIL LEVEL — FULL (100% paraphrased). This was a long "
+        "meeting: produce a fully rewritten, condensed summary in professional "
+        "language. No verbatim phrasing; capture outcomes and reasoning, not "
+        "the back-and-forth."),
+}
+
+
+def resolve_paraphrase_level(explicit: int | None,
+                             duration_minutes: float | None) -> int | None:
+    """Explicit level wins; otherwise derive from duration per the founders'
+    rule (40% toolbox-length talks, 80% >10 min, 100% >20 min). None when
+    neither is given — behaviour then stays exactly v5.1."""
+    if explicit in (1, 2, 3):
+        return explicit
+    if duration_minutes is not None:
+        if duration_minutes > 20:
+            return 3
+        if duration_minutes > 10:
+            return 2
+        return 1
+    return None
+
+
+def _apply_paraphrase_demo(result: dict, level: int) -> dict:
+    """Deterministic, visible effect of the level on the keyless demo provider
+    so the behaviour is testable end-to-end without a model key."""
+    summary = (result.get("summary") or "").strip()
+    if level == 1:
+        result["summary"] = (summary + " Key points are recorded close to the "
+                             "words spoken (light paraphrase).").strip()
+    elif level == 3:
+        first = summary.split(". ")[0].rstrip(".")
+        result["summary"] = (first + ". Fully paraphrased summary of a longer "
+                             "meeting: details condensed to outcomes.").strip()
+    # level 2 = the standard canned output, unchanged.
+    return result
+
+
 def extract_minutes(transcript: str, provider: str | None = None,
                     template: str = "safety",
-                    template_spec: dict | None = None) -> dict:
+                    template_spec: dict | None = None,
+                    paraphrase_level: int | None = None) -> dict:
     """Extract structured minutes from a transcript using the chosen provider
     and template ("safety" — the default, matching v2.2 — or "general").
 
@@ -406,17 +460,24 @@ def extract_minutes(transcript: str, provider: str | None = None,
     if caller is None:
         raise ValueError(f"Unknown provider '{provider}'. Use anthropic, gemini, openai, or demo.")
 
+    # v5.3: optional paraphrase-level block. Absent level (old callers, all
+    # regression suites) = the exact v5.1 prompt, character for character.
+    level_block = PARAPHRASE_BLOCKS.get(paraphrase_level, "")
+
     if template_spec:
         from template_engine import build_prompt_for_template
 
-        prompt = build_prompt_for_template(template_spec)
+        prompt = build_prompt_for_template(template_spec) + level_block
         has_hazards = any(s.get("kind") == "hazards"
                           for s in template_spec.get("sections", []))
         base_template = "safety" if has_hazards else "general"
         if provider == "demo":
             raw = _demo_safety(transcript) if has_hazards else _demo_general(transcript)
             result = _parse_json(raw, base_template)
-            return _demo_custom_additions(result, template_spec)
+            result = _demo_custom_additions(result, template_spec)
+            if paraphrase_level:
+                result = _apply_paraphrase_demo(result, paraphrase_level)
+            return result
         raw = caller(transcript, prompt)
         result = _parse_json(raw, base_template)
         # keep whatever custom content the model returned (defensively)
@@ -428,5 +489,8 @@ def extract_minutes(transcript: str, provider: str | None = None,
             result["custom_sections"] = data["custom_sections"]
         return result
 
-    raw = caller(transcript, PROMPTS_BY_TEMPLATE[template])
-    return _parse_json(raw, template)
+    raw = caller(transcript, PROMPTS_BY_TEMPLATE[template] + level_block)
+    result = _parse_json(raw, template)
+    if paraphrase_level and provider == "demo":
+        result = _apply_paraphrase_demo(result, paraphrase_level)
+    return result
