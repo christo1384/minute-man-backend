@@ -358,6 +358,21 @@
 
       <label class="fl" for="transcript">Transcript</label>
       <textarea id="transcript" placeholder="Your spoken words will appear here… or type / paste."></textarea>
+
+      <!-- ============ v6: ATTACHMENTS ============ -->
+      <div id="attachWrap" style="margin-top:18px;border-top:1px solid #e3e3e3;padding-top:14px">
+        <label class="fl">Attachments <span class="meta" style="font-weight:400">— voice memos, photos, PDFs, notes (optional)</span></label>
+        <p class="meta" id="attachHint" style="margin:2px 0 10px">Attach a voice memo recorded on your phone, a site photo, or a document. On a phone the picker offers Camera, Photos and Files.</p>
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+          <label class="btn btn-slate" style="cursor:pointer;margin:0">
+            <span>📎 Add file</span>
+            <input id="attachFile" type="file" accept="audio/*,image/*,application/pdf,.txt,.doc,.docx" multiple style="display:none"/>
+          </label>
+          <button type="button" class="btn btn-slate" id="recMemoBtn" style="margin:0"><span id="recMemoDot">●</span> Record voice memo</button>
+          <span class="meta" id="recMemoStatus"></span>
+        </div>
+        <div id="attachList" style="margin-top:10px"></div>
+      </div>
     </div>
     <p class="meta" id="genStatus" style="margin:0 0 10px"></p>
     <button class="btn btn-primary" id="genBtn" disabled>Review &amp; Confirm →</button>
@@ -689,7 +704,7 @@
 //                   Calls go to /api/minutes on the same address — no CORS, nothing to edit.
 //   "https://..." → a separate backend at that URL (e.g. Cloudflare page + Render backend).
 const BACKEND_URL = "SAME_ORIGIN";
-const APP_VERSION = "5.3";
+const APP_VERSION = "6.0";
 const backendConfigured = () => BACKEND_URL !== "";
 const apiBase = () => BACKEND_URL === "SAME_ORIGIN" ? "" : BACKEND_URL.replace(/\/+$/, "");
 // Wake the backend the moment the page opens (free hosting sleeps when idle,
@@ -706,7 +721,8 @@ const state = { selected:new Set(), signatures:{}, template:"safety", meetingTyp
   providerUsed:"",     // v4: echoed by /api/minutes
   closedByName:"",     // v4: remembered once per session for the Close flow
   templateId:null,     // v5: templates-table row driving this meeting (uploads)
-  templateSpec:null }; // v5: its TemplateSpec (labels for custom rendering)
+  templateSpec:null,   // v5: its TemplateSpec (labels for custom rendering)
+  pendingAttachments:[] }; // v6: files staged on Capture, uploaded after save
 
 // ---------------------------------------------------------------------------
 // v4: write requests go through apiFetch, which handles the OPTIONAL register
@@ -1240,6 +1256,160 @@ function startRec(){
 }
 function stopRec(){ recording=false; if(recStartMs!==null){ recAccumMs+=Date.now()-recStartMs; recStartMs=null; } if(recog){try{recog.stop();}catch(_){}} micBtn.classList.remove('rec'); micBtn.innerHTML='<span id="micDot">●</span> Start recording'; interim.textContent=''; if(ta.value.trim())micStatus.textContent='Recording stopped — review below, then generate.'; }
 micBtn.addEventListener('click',()=>recording?stopRec():startRec());
+
+// ===========================================================================
+// v6: ATTACHMENTS — pick files or record a voice memo on the Capture screen.
+// Files are staged in state.pendingAttachments and uploaded after the meeting
+// is saved to the register (we need the meeting id). A recorded voice memo can
+// optionally be transcribed straight into the transcript box before you
+// generate minutes — same effect as speaking the talk live.
+// ===========================================================================
+const attachFileInput=document.getElementById('attachFile');
+const attachListEl=document.getElementById('attachList');
+const recMemoBtn=document.getElementById('recMemoBtn');
+const recMemoStatus=document.getElementById('recMemoStatus');
+let attachSeq=0;
+
+function kindOf(file){
+  const t=(file.type||'').toLowerCase();
+  if(t.startsWith('audio/')) return 'audio';
+  if(t.startsWith('image/')) return 'photo';
+  const n=(file.name||'').toLowerCase();
+  if(/\.(m4a|mp3|wav|ogg|webm|aac|oga)$/.test(n)) return 'audio';
+  if(/\.(jpe?g|png|heic|gif|webp)$/.test(n)) return 'photo';
+  return 'document';
+}
+function kindIcon(k){ return k==='audio'?'🎙️':k==='photo'?'🖼️':'📄'; }
+function fmtSize(b){ if(b==null) return ''; if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(0)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
+
+function addPending(file, opts){
+  opts=opts||{};
+  const item={ id:++attachSeq, file, name:file.name||('memo-'+attachSeq), kind:kindOf(file),
+    size:file.size, status:'staged', canTranscribe:!!opts.canTranscribe };
+  state.pendingAttachments.push(item);
+  renderAttachList();
+}
+function removePending(id){
+  state.pendingAttachments=state.pendingAttachments.filter(x=>x.id!==id);
+  renderAttachList();
+}
+function renderAttachList(){
+  if(!attachListEl) return;
+  attachListEl.innerHTML='';
+  if(!state.pendingAttachments.length) return;
+  state.pendingAttachments.forEach(it=>{
+    const row=document.createElement('div');
+    row.className='ar-row'; row.style.alignItems='center'; row.style.gap='10px';
+    let right='';
+    if(it.status==='uploading') right='<span class="meta">Uploading…</span>';
+    else if(it.status==='done') right='<span class="meta" style="color:#1a7f37">✓ Saved</span>';
+    else if(it.status==='error') right='<span class="meta" style="color:#c02626">✕ '+escapeHtml(it.error||'failed')+'</span>';
+    else right='<button type="button" class="chip" data-rm="'+it.id+'">Remove</button>';
+    let extra='';
+    if(it.kind==='audio' && it.canTranscribe && it.status==='staged')
+      extra=' <button type="button" class="chip" data-tx="'+it.id+'">Transcribe into transcript</button>';
+    row.innerHTML='<span style="flex:1">'+kindIcon(it.kind)+' '+escapeHtml(it.name)
+      +' <span class="meta">'+fmtSize(it.size)+(it.txStatus?(' · '+escapeHtml(it.txStatus)):'')+'</span>'+extra+'</span>'
+      +'<span>'+right+'</span>';
+    attachListEl.appendChild(row);
+  });
+  attachListEl.querySelectorAll('[data-rm]').forEach(b=>b.addEventListener('click',()=>removePending(Number(b.dataset.rm))));
+  attachListEl.querySelectorAll('[data-tx]').forEach(b=>b.addEventListener('click',()=>transcribeMemo(Number(b.dataset.tx))));
+}
+
+if(attachFileInput) attachFileInput.addEventListener('change',()=>{
+  Array.from(attachFileInput.files||[]).forEach(f=>addPending(f,{canTranscribe:true}));
+  attachFileInput.value='';  // allow re-picking the same file
+});
+
+// --- Transcribe a staged/recorded audio memo into the transcript box -------
+async function transcribeMemo(id){
+  const it=state.pendingAttachments.find(x=>x.id===id); if(!it) return;
+  if(!backendConfigured()){ alert('Transcription needs the online server — it isn’t configured in this copy.'); return; }
+  it.txStatus='transcribing…'; renderAttachList();
+  try{
+    const fd=new FormData(); fd.append('file', it.file, it.name);
+    const res=await apiFetch(apiBase()+'/api/transcribe',{method:'POST',body:fd});
+    if(!res.ok){ let d=''; try{ d=(await res.json()).detail||''; }catch(_){}
+      throw new Error(res.status+(d?' — '+String(d).slice(0,80):'')); }
+    const text=((await res.json()).transcript||'').trim();
+    it.txStatus='transcribed'; renderAttachList();
+    if(!text){ alert('The memo came back empty.'); return; }
+    const cur=ta.value.trim();
+    if(cur){
+      if(confirm('Add the transcribed memo to the end of your current transcript?'))
+        ta.value = cur + '\n\n' + text;
+    } else { ta.value = text; }
+    ta.dispatchEvent(new Event('input'));
+    micStatus.textContent='Voice memo transcribed into the transcript.';
+  }catch(err){ it.txStatus='transcription failed'; renderAttachList();
+    alert('Couldn’t transcribe the memo ('+err.message+'). The file is still attached; you can transcribe later or type notes.'); }
+}
+
+// --- In-app voice recording (MediaRecorder) --------------------------------
+// iOS Safari only supports audio/mp4; Chrome/Android prefer audio/webm. Detect
+// per-browser rather than hardcoding, or recording silently produces nothing.
+let mediaRec=null, mediaChunks=[], mediaStream=null, memoRecording=false;
+function pickAudioMime(){
+  const prefs=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg'];
+  if(window.MediaRecorder && MediaRecorder.isTypeSupported)
+    for(const m of prefs){ try{ if(MediaRecorder.isTypeSupported(m)) return m; }catch(_){}}
+  return '';
+}
+async function startMemo(){
+  if(!navigator.mediaDevices || !window.MediaRecorder){
+    alert('This browser can’t record audio in-app. You can still attach a voice memo recorded in your phone’s Voice Memos app using “Add file”.'); return; }
+  try{ mediaStream=await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(err){ alert('Microphone permission is needed to record a memo ('+err.name+').'); return; }
+  const mime=pickAudioMime();
+  try{ mediaRec = mime ? new MediaRecorder(mediaStream,{mimeType:mime}) : new MediaRecorder(mediaStream); }
+  catch(_){ mediaRec=new MediaRecorder(mediaStream); }
+  mediaChunks=[];
+  mediaRec.ondataavailable=e=>{ if(e.data&&e.data.size) mediaChunks.push(e.data); };
+  mediaRec.onstop=()=>{
+    const type=(mediaRec.mimeType||mime||'audio/mp4').split(';')[0];
+    const ext = type.indexOf('mp4')>=0?'m4a':type.indexOf('ogg')>=0?'ogg':'webm';
+    const blob=new Blob(mediaChunks,{type});
+    const file=new File([blob], 'voice-memo-'+Date.now()+'.'+ext, {type});
+    addPending(file,{canTranscribe:true});
+    if(mediaStream){ mediaStream.getTracks().forEach(t=>t.stop()); mediaStream=null; }
+    recMemoStatus.textContent='Voice memo added below.';
+  };
+  mediaRec.start();
+  memoRecording=true;
+  recMemoBtn.classList.add('rec');
+  recMemoBtn.innerHTML='<span id="recMemoDot">■</span> Stop memo';
+  recMemoStatus.textContent='Recording… tap Stop when done.';
+}
+function stopMemo(){
+  memoRecording=false;
+  try{ if(mediaRec && mediaRec.state!=='inactive') mediaRec.stop(); }catch(_){}
+  recMemoBtn.classList.remove('rec');
+  recMemoBtn.innerHTML='<span id="recMemoDot">●</span> Record voice memo';
+}
+if(recMemoBtn) recMemoBtn.addEventListener('click',()=>memoRecording?stopMemo():startMemo());
+
+// --- Upload staged attachments to a saved meeting --------------------------
+async function uploadPendingAttachments(meetingId, statusEl){
+  const items=state.pendingAttachments.filter(x=>x.status!=='done');
+  if(!items.length) return {ok:0, failed:0};
+  if(!backendConfigured()){ return {ok:0, failed:0, skipped:true}; }
+  let ok=0, failed=0;
+  for(const it of items){
+    it.status='uploading'; renderAttachList();
+    if(statusEl) statusEl.textContent='Uploading attachment: '+it.name+'…';
+    try{
+      const fd=new FormData(); fd.append('file', it.file, it.name);
+      if(settings.defaultLed) fd.append('uploaded_by', settings.defaultLed);
+      const res=await apiFetch(apiBase()+'/api/meetings/'+meetingId+'/attachments',{method:'POST',body:fd});
+      if(!res.ok){ let d=''; try{ d=(await res.json()).detail||''; }catch(_){}
+        throw new Error(res.status+(d?(' — '+String(d).slice(0,80)):'')); }
+      it.status='done'; ok++;
+    }catch(err){ it.status='error'; it.error=err.message; failed++; }
+    renderAttachList();
+  }
+  return {ok, failed};
+}
 
 const genStatus=document.getElementById('genStatus');
 
@@ -1875,6 +2045,15 @@ saveRegBtn.addEventListener('click',async()=>{
     state.lastSavedId=saved.id;
     saveRegStatus.textContent='✓ Saved to the register (meeting #'+saved.id+').';
     saveRegStatus.className='savefeed ok';
+    // v6: upload any staged attachments now that the meeting has an id.
+    if(state.pendingAttachments.some(x=>x.status!=='done')){
+      const r=await uploadPendingAttachments(saved.id, saveRegStatus);
+      if(r.skipped){ /* offline copy — nothing to do */ }
+      else if(r.failed){ saveRegStatus.textContent='✓ Saved (meeting #'+saved.id+'). '+r.ok+' attachment(s) uploaded, '+r.failed+' failed — see the list above.';
+        saveRegStatus.className='savefeed err'; }
+      else if(r.ok){ saveRegStatus.textContent='✓ Saved (meeting #'+saved.id+') with '+r.ok+' attachment(s).';
+        saveRegStatus.className='savefeed ok'; }
+    }
   }catch(err){
     saveRegStatus.textContent='✕ Save failed ('+err.message+') — the record is still on this screen; try again.';
     saveRegStatus.className='savefeed err';
@@ -2009,8 +2188,40 @@ async function openMeetingView(id){
       html+='<p style="margin:10px 0 2px"><b>Minutes summary</b></p><p style="margin:2px 0;white-space:pre-wrap">'+escapeHtml(m.summary)+'</p>';
     }
     html+=sec('Attendance',m.attendance,a=>'<li>'+escapeHtml(a.name)+(a.signature?' — '+escapeHtml(a.signature):'')+'</li>','None recorded.');
+    html+='<div id="mvAttach"><p style="margin:10px 0 2px"><b>Attachments</b></p><p style="margin:2px 0;color:#64748b">Loading…</p></div>';
     document.getElementById('mvBody').innerHTML=html;
+    loadMeetingAttachments(id);
   }catch(err){ document.getElementById('mvMeta').textContent='Couldn’t load this meeting ('+err.message+').'; }
+}
+
+// v6: attachments live on their own endpoint (keeps the meeting payload
+// unchanged). Fetched lazily when a meeting is opened.
+async function loadMeetingAttachments(id){
+  const box=document.getElementById('mvAttach'); if(!box) return;
+  try{
+    const res=await fetch(apiBase()+'/api/meetings/'+id+'/attachments');
+    if(!res.ok) throw new Error(res.status);
+    const data=await res.json();
+    const items=data.attachments||[];
+    let h='<p style="margin:10px 0 2px"><b>Attachments</b></p>';
+    if(!items.length){ h+='<p style="margin:2px 0;color:#64748b">None.</p>'; box.innerHTML=h; return; }
+    h+='<ul style="margin:4px 0 0;padding-left:20px">';
+    items.forEach(a=>{
+      const ic=a.kind==='audio'?'🎙️':a.kind==='photo'?'🖼️':'📄';
+      const link=a.url?('<a href="'+encodeURI(a.url)+'" target="_blank" rel="noopener">'+escapeHtml(a.original_filename||a.kind)+'</a>')
+                       :escapeHtml(a.original_filename||a.kind);
+      let tx='';
+      if(a.kind==='audio'){
+        if(a.transcript_status==='done'&&a.transcript) tx=' <details style="margin-top:2px"><summary class="meta">transcript</summary><div style="white-space:pre-wrap;margin-top:4px">'+escapeHtml(a.transcript)+'</div></details>';
+        else if(a.transcript_status==='failed') tx=' <span class="meta">(transcription failed)</span>';
+        else if(a.transcript_status==='pending') tx=' <span class="meta">(transcribing…)</span>';
+      }
+      h+='<li>'+ic+' '+link+' <span class="meta">'+(a.size_bytes?fmtSize(a.size_bytes):'')+'</span>'+tx+'</li>';
+    });
+    h+='</ul>';
+    if(!data.storage_configured) h+='<p class="meta" style="color:#c02626">File storage isn’t set up on the server, so files can’t be downloaded.</p>';
+    box.innerHTML=h;
+  }catch(err){ box.innerHTML='<p style="margin:10px 0 2px"><b>Attachments</b></p><p class="meta">Couldn’t load attachments.</p>'; }
 }
 // Re-export a stored meeting exactly as it was saved (same document as the
 // original export because both go through the same /export/* endpoints).
