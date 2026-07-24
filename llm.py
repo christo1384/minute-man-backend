@@ -439,6 +439,87 @@ def _apply_paraphrase_demo(result: dict, level: int) -> dict:
                              "meeting: details condensed to outcomes.").strip()
     # level 2 = the standard canned output, unchanged.
     return result
+# v6 — audio transcription (for attached voice memos).
+# ---------------------------------------------------------------------------
+# Gemini accepts audio inline in the same generateContent call used for text,
+# so a voice memo can be transcribed with the same free key that powers the
+# minutes extraction. Anthropic/OpenAI/demo can't do audio here, so we always
+# route transcription through Gemini when a GEMINI_API_KEY is present — even
+# if the app's DEFAULT_PROVIDER is something else — and fail cleanly otherwise.
+
+def transcription_available() -> bool:
+    """True when audio can be auto-transcribed (a Gemini key is present)."""
+    return bool(os.getenv("GEMINI_API_KEY"))
+
+
+def _gemini_transcribe(file_bytes: bytes, content_type: str) -> str:
+    """Transcribe audio bytes via Gemini REST (stdlib only, mirrors
+    _call_gemini's model-retry-on-404 behaviour)."""
+    import base64
+    import urllib.request
+    import urllib.error
+
+    global _gemini_model_cache
+    key = os.environ["GEMINI_API_KEY"]
+    audio_b64 = base64.b64encode(file_bytes).decode("ascii")
+    mime = (content_type or "audio/mp4").split(";")[0].strip() or "audio/mp4"
+    instruction = (
+        "Transcribe this audio recording of a worksite safety talk / meeting "
+        "verbatim into plain text. Output only the spoken words, no commentary, "
+        "no timestamps, no speaker labels unless clearly distinguishable.")
+
+    def _post(model: str):
+        url = ("https://generativelanguage.googleapis.com/v1beta/models/"
+               f"{model}:generateContent")
+        body = json.dumps({
+            "contents": [{"role": "user", "parts": [
+                {"text": instruction},
+                {"inline_data": {"mime_type": mime, "data": audio_b64}},
+            ]}],
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=body,
+            headers={"Content-Type": "application/json", "x-goog-api-key": key},
+            method="POST")
+        with urllib.request.urlopen(req, timeout=180) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    try:
+        data = _post(_gemini_model_cache or GEMINI_MODEL)
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            _gemini_model_cache = _discover_gemini_model(key)
+            data = _post(_gemini_model_cache)
+        else:
+            detail = exc.read().decode("utf-8", "replace")[:300]
+            raise ValueError(f"Gemini transcription error {exc.code}: {detail}") from exc
+    try:
+        parts = data["candidates"][0]["content"]["parts"]
+        text = "".join(p.get("text", "") for p in parts
+                       if isinstance(p, dict) and not p.get("thought"))
+        if not text.strip():
+            text = "".join(p.get("text", "") for p in parts if isinstance(p, dict))
+        return text.strip()
+    except (KeyError, IndexError) as exc:
+        raise ValueError(f"Unexpected Gemini transcription shape: {str(data)[:300]}") from exc
+
+
+def transcribe_audio(file_bytes: bytes, content_type: str | None = None,
+                     provider: str | None = None) -> str:
+    """Return a plain-text transcript of an audio attachment.
+
+    Routing: audio always goes to Gemini (the only provider wired for audio
+    and the free one). `provider` is accepted for signature symmetry with
+    extract_minutes but audio never uses anthropic/openai/demo. Raises
+    ValueError with a clear reason when no Gemini key is configured — callers
+    (main.py) catch this and mark the attachment transcript_status="failed"
+    without failing the upload itself."""
+    if not os.getenv("GEMINI_API_KEY"):
+        raise ValueError(
+            "Auto-transcription needs a GEMINI_API_KEY (free at "
+            "https://aistudio.google.com). The file was stored; add the key "
+            "to transcribe voice memos.")
+    return _gemini_transcribe(file_bytes, content_type or "audio/mp4")
 
 
 def extract_minutes(transcript: str, provider: str | None = None,

@@ -47,7 +47,8 @@ import os
 import logging
 from typing import List, Literal, Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import (Depends, FastAPI, File, Form, Header, HTTPException,
+                     Query, UploadFile)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -62,16 +63,18 @@ except Exception:  # pragma: no cover
     pass
 
 from llm import extract_minutes
+from llm import transcribe_audio, transcription_available as llm_transcription_available
 from export_routes import router as export_router, MinutesExportRequest, AttendanceEntry
 import crud
 from db import get_schema_version, get_session, init_db, SessionLocal
 
 import webhooks_out
+import storage
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("minute-man")
 
-APP_VERSION = "5.3.0"
+APP_VERSION = "6.0.0"
 
 
 def require_write_key(x_api_key: str | None = Header(None, alias="X-API-Key")):
@@ -190,6 +193,8 @@ def health_check(session: Session = Depends(get_session)):
         "webhooks": webhooks,
         "email_configured": webhooks_out.email_configured(),
         "api_key_required": bool(os.getenv("MM_API_KEY")),
+        "storage_configured": storage.is_configured(),          # v6
+        "transcription_available": llm_transcription_available(),  # v6
     }
 
 
@@ -829,6 +834,170 @@ def test_webhook(webhook_id: int, session: Session = Depends(get_session)):
     except Exception as exc:
         return {"delivered": False, "error": str(exc)[:160]}
     return {"delivered": 200 <= status < 300, "status": status}
+
+
+# ---------------------------------------------------------------------------
+# v6 — Attachments (voice memos, photos, PDFs, txt).
+# Bytes live in Cloudflare R2 (storage.py); the DB holds only a pointer row.
+# Audio is auto-transcribed via Gemini when a key is present — transcription
+# never blocks or fails the upload itself.
+# ---------------------------------------------------------------------------
+def _max_attachment_bytes() -> int:
+    try:
+        mb = int(os.getenv("MM_MAX_ATTACHMENT_MB", "25"))
+    except ValueError:
+        mb = 25
+    return max(1, mb) * 1024 * 1024
+
+
+def _classify_kind(content_type: str | None, filename: str | None) -> str:
+    ct = (content_type or "").lower()
+    if ct.startswith("audio/"):
+        return "audio"
+    if ct.startswith("image/"):
+        return "photo"
+    name = (filename or "").lower()
+    if name.rsplit(".", 1)[-1] in ("m4a", "mp3", "wav", "ogg", "webm", "aac", "oga"):
+        return "audio"
+    if name.rsplit(".", 1)[-1] in ("jpg", "jpeg", "png", "heic", "gif", "webp"):
+        return "photo"
+    return "document"
+
+
+@app.post("/api/meetings/{meeting_id}/attachments",
+          dependencies=[Depends(require_write_key)])
+async def upload_attachment(meeting_id: int,
+                            file: UploadFile = File(...),
+                            uploaded_by: str | None = Form(None),
+                            session: Session = Depends(get_session)):
+    """Attach one file to a meeting. Stores it in R2, records a pointer row,
+    and (for audio) kicks off transcription. Returns the attachment with a
+    fresh signed download URL."""
+    if not storage.is_configured():
+        raise HTTPException(
+            status_code=501,
+            detail="File storage isn't set up on the server yet. An admin needs "
+                   "to add the R2_* settings (see R2-SETUP-FOR-CHRIS.md).")
+    m = crud.get_meeting(session, meeting_id)
+    if m is None:
+        raise HTTPException(status_code=404, detail=f"No meeting with id {meeting_id}.")
+
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="The uploaded file was empty.")
+    limit = _max_attachment_bytes()
+    if len(data) > limit:
+        raise HTTPException(
+            status_code=413,
+            detail=f"That file is too large ({len(data)//1024//1024} MB). The "
+                   f"limit is {limit//1024//1024} MB.")
+
+    kind = _classify_kind(file.content_type, file.filename)
+    key = storage.make_key(meeting_id, file.filename)
+    try:
+        storage.upload_attachment(data, key, file.content_type)
+    except storage.StorageNotConfigured as exc:
+        raise HTTPException(status_code=501, detail=str(exc))
+    except Exception as exc:
+        logger.exception("R2 upload failed")
+        raise HTTPException(status_code=502, detail=f"Storage upload failed: {exc}")
+
+    initial_status = "pending" if kind == "audio" else None
+    att = crud.create_attachment(
+        session, meeting_id=meeting_id, kind=kind, storage_key=key,
+        original_filename=file.filename, content_type=file.content_type,
+        size_bytes=len(data), uploaded_by=uploaded_by,
+        transcript_status=initial_status)
+
+    # Audio: transcribe synchronously (a toolbox-talk memo is minutes long).
+    # Never fail the upload if transcription errors — record the reason.
+    if kind == "audio":
+        try:
+            text = transcribe_audio(data, file.content_type)
+            crud.set_attachment_transcript(session, att.id, text, "done")
+        except Exception as exc:
+            logger.warning("Transcription failed for attachment %s: %s", att.id, exc)
+            crud.set_attachment_transcript(session, att.id, None, "failed", reason=str(exc)[:200])
+        session.refresh(att)
+
+    signed = None
+    try:
+        signed = storage.get_signed_url(key, download_name=file.filename)
+    except Exception:
+        pass
+    result = crud.attachment_to_dict(att, signed)
+
+    webhooks_out.fire_event("attachment.added", {
+        "id": att.id, "meeting_id": meeting_id, "kind": att.kind,
+        "original_filename": att.original_filename,
+        "size_bytes": att.size_bytes,
+        "transcript_status": att.transcript_status,
+    })
+    return result
+
+
+@app.post("/api/transcribe", dependencies=[Depends(require_write_key)])
+async def transcribe_only(file: UploadFile = File(...)):
+    """Transcribe an audio clip to text WITHOUT storing it — the 'turn this
+    voice memo into transcript text I can review before generating minutes'
+    path. No meeting, no R2, no DB row. The file itself is still attached to a
+    meeting separately via the upload endpoint. 501 when no Gemini key."""
+    if not llm_transcription_available():
+        raise HTTPException(
+            status_code=501,
+            detail="Auto-transcription needs a Gemini key on the server "
+                   "(free at https://aistudio.google.com).")
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="The audio file was empty.")
+    if len(data) > _max_attachment_bytes():
+        raise HTTPException(status_code=413, detail="That audio file is too large.")
+    try:
+        text = transcribe_audio(data, file.content_type)
+    except Exception as exc:
+        logger.warning("Standalone transcription failed: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Transcription failed: {exc}")
+    return {"transcript": text}
+
+
+@app.get("/api/meetings/{meeting_id}/attachments")
+def list_meeting_attachments(meeting_id: int, session: Session = Depends(get_session)):
+    """List a meeting's attachments, each with a fresh short-lived signed URL
+    (regenerated per request — never a stored public link). When storage is
+    unconfigured the rows still list, just without URLs."""
+    m = crud.get_meeting(session, meeting_id)
+    if m is None:
+        raise HTTPException(status_code=404, detail=f"No meeting with id {meeting_id}.")
+    rows = crud.list_attachments(session, meeting_id)
+    out = []
+    configured = storage.is_configured()
+    for att in rows:
+        signed = None
+        if configured:
+            try:
+                signed = storage.get_signed_url(att.storage_key,
+                                                download_name=att.original_filename)
+            except Exception:
+                signed = None
+        out.append(crud.attachment_to_dict(att, signed))
+    return {"attachments": out, "count": len(out), "storage_configured": configured}
+
+
+@app.delete("/api/attachments/{attachment_id}",
+            dependencies=[Depends(require_write_key)])
+def delete_attachment(attachment_id: int, session: Session = Depends(get_session)):
+    """Remove an attachment: delete the R2 object (best-effort) then the row."""
+    att = crud.get_attachment(session, attachment_id)
+    if att is None:
+        raise HTTPException(status_code=404, detail=f"No attachment with id {attachment_id}.")
+    key = att.storage_key
+    if storage.is_configured():
+        try:
+            storage.delete_attachment(key)
+        except Exception:
+            logger.warning("R2 delete failed for key %s (row still removed)", key)
+    crud.delete_attachment_row(session, attachment_id)
+    return {"deleted": attachment_id}
 
 
 # ---------------------------------------------------------------------------

@@ -26,7 +26,7 @@ from datetime import datetime, timezone
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
-SCHEMA_VERSION = 5  # v5.3 — people.email (email-the-record)
+SCHEMA_VERSION = 6  # v6 "Attachments" table, stacked on v5.3 people.email
 
 # sqlite:///./minuteman.db  →  a file called minuteman.db next to main.py.
 DEFAULT_DB_URL = "sqlite:///./minuteman.db"

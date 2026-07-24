@@ -14,8 +14,8 @@ from sqlalchemy.orm import Session, selectinload
 
 from dates import parse_due_date, parse_meeting_date
 from matching import is_real_person, normalize
-from models import (Action, Attendee, Decision, FeedToken, Hazard, Incident,
-                    Meeting, Person, Site, Template, Webhook)
+from models import (Action, Attachment, Attendee, Decision, FeedToken, Hazard,
+                    Incident, Meeting, Person, Site, Template, Webhook)
 
 
 def _iso(dt: datetime | None) -> str | None:
@@ -780,3 +780,81 @@ def action_register_row(session: Session, action_id: int) -> dict | None:
         return None
     m = session.get(Meeting, a.meeting_id)
     return _action_row(a, m, date.today())
+
+
+# ---------------------------------------------------------------------------
+# v6 — attachments (metadata rows; bytes live in R2, see storage.py)
+# ---------------------------------------------------------------------------
+def attachment_to_dict(att: Attachment, signed_url: str | None = None) -> dict:
+    """Serialise an attachment row. `signed_url` (a short-lived R2 GET link)
+    is generated fresh by the caller per request — never stored."""
+    return {
+        "id": att.id,
+        "meeting_id": att.meeting_id,
+        "kind": att.kind,
+        "original_filename": att.original_filename,
+        "content_type": att.content_type,
+        "size_bytes": att.size_bytes,
+        "transcript": att.transcript,
+        "transcript_status": att.transcript_status,
+        "uploaded_by": att.uploaded_by,
+        "url": signed_url,  # None when storage isn't configured / not requested
+        "extra": att.extra or {},
+        "created_at": _iso(att.created_at),
+    }
+
+
+def create_attachment(session: Session, meeting_id: int, kind: str,
+                      storage_key: str, original_filename: str | None,
+                      content_type: str | None, size_bytes: int | None,
+                      uploaded_by: str | None,
+                      transcript_status: str | None = None) -> Attachment:
+    att = Attachment(
+        meeting_id=meeting_id, kind=kind, storage_key=storage_key,
+        original_filename=original_filename, content_type=content_type,
+        size_bytes=size_bytes, uploaded_by=(uploaded_by or "").strip() or None,
+        transcript_status=transcript_status, extra={})
+    session.add(att)
+    session.commit()
+    session.refresh(att)
+    return att
+
+
+def get_attachment(session: Session, attachment_id: int) -> Attachment | None:
+    return session.get(Attachment, attachment_id)
+
+
+def list_attachments(session: Session, meeting_id: int) -> list[Attachment]:
+    q = (select(Attachment).where(Attachment.meeting_id == meeting_id)
+         .order_by(Attachment.created_at.asc(), Attachment.id.asc()))
+    return list(session.execute(q).scalars().all())
+
+
+def set_attachment_transcript(session: Session, attachment_id: int,
+                              transcript: str | None, status: str,
+                              reason: str | None = None) -> Attachment | None:
+    att = session.get(Attachment, attachment_id)
+    if att is None:
+        return None
+    att.transcript = transcript
+    att.transcript_status = status
+    if reason:
+        att.extra = dict(att.extra or {}, transcript_error=reason)
+    session.commit()
+    return att
+
+
+def delete_attachment_row(session: Session, attachment_id: int) -> str | None:
+    """Delete the DB row and return its storage_key so the caller can remove
+    the R2 object. Returns None when the row doesn't exist."""
+    att = session.get(Attachment, attachment_id)
+    if att is None:
+        return None
+    key = att.storage_key
+    session.delete(att)
+    session.commit()
+    return key
+
+
+def count_attachments(session: Session) -> int:
+    return session.execute(select(func.count(Attachment.id))).scalar_one()

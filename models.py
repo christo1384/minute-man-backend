@@ -1,5 +1,19 @@
 """
-Minute Man v5.1 — SQLAlchemy models (schema version 4).
+Minute Man v6 — SQLAlchemy models (schema version 5).
+
+Schema v5 delta over v4 (ADDITIVE — see alembic/versions/0004…py): the
+"Attachments" feature. Files (voice memos, photos, PDFs, txt) attached to a
+meeting are stored in object storage (Cloudflare R2 — see storage.py), NOT on
+the meeting row and NOT on the server disk (Render's free disk is wiped on
+redeploy). Only a lightweight pointer row lives in the database:
+  * New table `attachments` — one row per file: its R2 object key, kind,
+    content type, size, optional transcript (audio only) + transcript_status,
+    and who uploaded it. The raw file bytes never touch the database; signed
+    download URLs are regenerated per request from `storage_key`.
+  * `attachments` is a CHILD of meetings (ON DELETE CASCADE), so deleting or
+    hard-deleting a meeting removes its attachment rows exactly like every
+    other child table. (R2 objects are best-effort deleted alongside — see
+    crud.delete_attachment / main.py.)
 
 Schema v4 delta over v3 (ADDITIVE — see alembic/versions/0003…py): the
 "Office Loop" plumbing. Standards, not stored credentials: Minute Man never
@@ -176,6 +190,8 @@ class Meeting(Base):
         foreign_keys="Action.meeting_id")  # v2: Action also FKs meetings via carried_from_meeting_id
     decisions: Mapped[list["Decision"]] = relationship(
         back_populates="meeting", cascade="all, delete-orphan", passive_deletes=True)
+    attachments: Mapped[list["Attachment"]] = relationship(
+        back_populates="meeting", cascade="all, delete-orphan", passive_deletes=True)
 
 
 class Attendee(Base):
@@ -316,3 +332,33 @@ class Webhook(Base):
     last_fired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     extra: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class Attachment(Base):
+    """v5 — a file attached to a meeting (voice memo, photo, PDF, txt).
+
+    The bytes live in object storage (Cloudflare R2), never in this table and
+    never on the server disk. `storage_key` is the R2 object key; download
+    URLs are short-lived signed URLs regenerated per request (never a stored
+    public link). `transcript` is filled for audio only, once auto-
+    transcription runs; `transcript_status` tracks that job
+    ("pending"|"done"|"failed"; NULL for non-audio, which are never
+    transcribed). Everything else future-proofs via `extra` like every table."""
+
+    __tablename__ = "attachments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    meeting_id: Mapped[int] = mapped_column(
+        ForeignKey("meetings.id", ondelete="CASCADE"), nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(String(20), nullable=False)  # "audio" | "photo" | "document"
+    original_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    content_type: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    storage_key: Mapped[str] = mapped_column(String(400), nullable=False)  # the R2 object key
+    transcript: Mapped[str | None] = mapped_column(Text, nullable=True)  # audio only
+    transcript_status: Mapped[str | None] = mapped_column(String(20), nullable=True)  # pending|done|failed|None
+    uploaded_by: Mapped[str | None] = mapped_column(String(120), nullable=True)  # free text
+    extra: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    meeting: Mapped[Meeting] = relationship(back_populates="attachments")
