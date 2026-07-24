@@ -877,7 +877,7 @@ async def upload_attachment(meeting_id: int,
         raise HTTPException(
             status_code=501,
             detail="File storage isn't set up on the server yet. An admin needs "
-                   "to add the R2_* settings (see R2-SETUP-FOR-CHRIS.md).")
+                   "to add the S3_* settings (see STORAGE-SETUP-FOR-CHRIS.md).")
     m = crud.get_meeting(session, meeting_id)
     if m is None:
         raise HTTPException(status_code=404, detail=f"No meeting with id {meeting_id}.")
